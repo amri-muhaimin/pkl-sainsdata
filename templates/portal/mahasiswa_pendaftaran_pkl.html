@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Pendaftaran PKL - {{ mahasiswa.nama }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    >
+    <style>
+        body {
+            background: #f3f4f6;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .page-shell {
+            max-width: 880px;
+        }
+        .section-card {
+            border-radius: 1rem;
+            border: none;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, .06);
+        }
+        .section-card .card-header {
+            background: linear-gradient(120deg, #4f46e5, #6366f1);
+            color: #eef2ff;
+            border-radius: 1rem 1rem 0 0 !important;
+        }
+        .badge-status {
+            font-size: .8rem;
+            border-radius: 999px;
+            padding: .25rem .7rem;
+        }
+        .badge-dikirim { background: #e0f2fe; color: #1d4ed8; }
+        .badge-disetujui { background: #dcfce7; color: #166534; }
+        .badge-ditolak { background: #fee2e2; color: #b91c1c; }
+    </style>
+</head>
+<body>
+<div class="container my-4 page-shell">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Pendaftaran PKL</h2>
+            <div class="text-muted" style="font-size: .9rem;">
+                Isi data pendaftaran PKL dan upload surat penerimaan dari perusahaan.
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'portal:mahasiswa_dashboard' %}"
+               class="btn btn-outline-secondary btn-sm me-2">
+                &larr; Kembali ke Dashboard
+            </a>
+            <a href="{% url 'portal:logout' %}" class="btn btn-outline-secondary btn-sm">
+                Logout
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if pendaftaran %}
+        <div class="alert alert-light border mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Status pendaftaran terakhir:
+                    {% if pendaftaran.status == "DISETUJUI" %}
+                        <span class="badge-status badge-disetujui">Disetujui</span>
+                    {% elif pendaftaran.status == "DITOLAK" %}
+                        <span class="badge-status badge-ditolak">Ditolak</span>
+                    {% else %}
+                        <span class="badge-status badge-dikirim">Diajukan</span>
+                    {% endif %}
+                    <div class="small text-muted mt-1">
+                        Periode: {{ pendaftaran.periode }} &middot;
+                        Mitra: {{ pendaftaran.mitra.nama }}
+                    </div>
+                </div>
+                <div class="small text-muted">
+                    Diajukan pada: {{ pendaftaran.tanggal_pengajuan }}
+                </div>
+            </div>
+            {% if pendaftaran.catatan_koordinator %}
+                <hr class="my-2">
+                <div class="small">
+                    <strong>Catatan koordinator:</strong><br>
+                    {{ pendaftaran.catatan_koordinator|linebreaksbr }}
+                </div>
+            {% endif %}
+            {% if pendaftaran.surat_penerimaan %}
+                <hr class="my-2">
+                <div class="small">
+                    <strong>Surat penerimaan saat ini:</strong>
+                    <a href="{{ pendaftaran.surat_penerimaan.url }}" target="_blank">
+                        Lihat / download
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="card section-card">
+        <div class="card-header">
+            <h5 class="mb-0">Form Pendaftaran PKL</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="{{ form.periode.id_for_label }}">Periode PKL</label>
+                        {{ form.periode }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="{{ form.mitra.id_for_label }}">Perusahaan / Mitra</label>
+                        {{ form.mitra }}
+                        <div class="form-text">
+                            Jika mitra belum ada di daftar, hubungi koordinator PKL.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="{{ form.jenis_pkl.id_for_label }}">Jenis PKL</label>
+                        {{ form.jenis_pkl }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="{{ form.surat_penerimaan.id_for_label }}">
+                            Surat penerimaan
+                        </label>
+                        {{ form.surat_penerimaan }}
+                        <div class="form-text">
+                            Disarankan format PDF atau gambar (maks. beberapa MB).
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.anggota_kelompok.id_for_label }}">
+                        Anggota kelompok (jika PKL kelompok)
+                    </label>
+                    {{ form.anggota_kelompok }}
+                    <div class="form-text">
+                        Tulis NIM dan nama anggota lain (jika ada). Jika individu, boleh dikosongkan.
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Simpan & Ajukan Pendaftaran
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
