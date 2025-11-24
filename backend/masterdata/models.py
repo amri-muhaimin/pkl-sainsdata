@@ -1,6 +1,21 @@
+# backend/masterdata/models.py
+# backend/masterdata/models.py
+import os
+
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
 
+
+def validate_surat_penerimaan_file(file_obj):
+    ext = os.path.splitext(file_obj.name)[1].lower()
+    allowed_ext = [".pdf", ".jpg", ".jpeg", ".png"]
+    if ext not in allowed_ext:
+        raise ValidationError("File harus berformat PDF, JPG, JPEG, atau PNG.")
+
+    max_size_mb = 2
+    if file_obj.size > max_size_mb * 1024 * 1024:
+        raise ValidationError(f"Ukuran file maksimal {max_size_mb} MB.")
 
 
 class Dosen(models.Model):
@@ -14,10 +29,6 @@ class Dosen(models.Model):
     )
     nidn = models.CharField("NIDN", max_length=20, unique=True)
     nama = models.CharField(max_length=100)
-    
-
-    nidn = models.CharField("NIDN", max_length=20, unique=True)
-    nama = models.CharField(max_length=100)
     email = models.EmailField(blank=True, null=True)
     no_hp = models.CharField("No. HP/WA", max_length=20, blank=True, null=True)
 
@@ -29,15 +40,21 @@ class Dosen(models.Model):
 
     kuota_bimbingan = models.PositiveIntegerField(
         default=10,
-        help_text="Maksimal jumlah mahasiswa PKL yang dibimbing pada satu periode."
+        help_text="Maksimal jumlah mahasiswa PKL yang dibimbing pada satu periode.",
     )
+
+    is_koordinator_pkl = models.BooleanField(
+        default=False,
+        help_text="Centang jika dosen ini bertindak sebagai koordinator PKL.",
+        )
 
     class Meta:
         verbose_name = "Dosen"
         verbose_name_plural = "Dosen"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.nama} ({self.nidn})"
+
 
 
 class Mitra(models.Model):
@@ -207,7 +224,8 @@ class PendaftaranPKL(models.Model):
     )
     surat_penerimaan = models.FileField(
         upload_to="surat_penerimaan/",
-        help_text="Upload surat penerimaan dari perusahaan (PDF/JPG).",
+        validators=[validate_surat_penerimaan_file],
+        help_text="Upload surat penerimaan (PDF/JPG/PNG, maks. 2 MB).",
     )
     status = models.CharField(
         max_length=10,

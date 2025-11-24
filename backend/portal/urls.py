@@ -1,7 +1,8 @@
-from django.urls import path
-from django.contrib.auth import views as auth_views
+# backend/portal/urls.py
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth import views as auth_views
+from django.urls import path
 
 from . import views
 
@@ -11,17 +12,10 @@ urlpatterns = [
     # Auth
     path(
         "login/",
-        auth_views.LoginView.as_view(
-            template_name="portal/login.html"
-        ),
+        auth_views.LoginView.as_view(template_name="portal/login.html"),
         name="login",
     ),
-    path(
-        "logout/",
-        views.portal_logout,
-        name="logout",
-    ),
-
+    path("logout/", views.portal_logout, name="logout"),
     path("after-login/", views.after_login, name="after_login"),
 
     # Dosen
@@ -48,27 +42,31 @@ urlpatterns = [
         name="dosen_guidance_export",
     ),
 
+    # Koordinator PKL
+    path(
+        "koor/dashboard/",
+        views.koordinator_dashboard,
+        name="koordinator_dashboard",
+    ),
+    path(
+        "koor/pendaftaran/",
+        views.koordinator_pendaftaran_list,
+        name="koordinator_pendaftaran_list",
+    ),
+    path(
+        "koor/pendaftaran/<int:pk>/",
+        views.koordinator_pendaftaran_detail,
+        name="koordinator_pendaftaran_detail",
+    ),
+        path(
+        "koor/pemetaan/",
+        views.koordinator_pemetaan,
+        name="koordinator_pemetaan",
+    ),
+
+
     # Mahasiswa
-    path(
-        "mhs/dashboard/",
-        views.mahasiswa_dashboard,
-        name="mahasiswa_dashboard",
-    ),
-    path(
-        "mhs/logbook/add/",
-        views.mahasiswa_logbook_add,
-        name="mahasiswa_logbook_add",
-    ),
-    path(
-        "mhs/logbook/export/",
-        views.mahasiswa_logbook_export,
-        name="mahasiswa_logbook_export",
-    ),
-    path(
-        "mhs/dashboard/",
-        views.mahasiswa_dashboard,
-        name="mahasiswa_dashboard",
-    ),
+    path("mhs/dashboard/", views.mahasiswa_dashboard, name="mahasiswa_dashboard"),
     path(
         "mhs/logbook/add/",
         views.mahasiswa_logbook_add,
@@ -83,7 +81,7 @@ urlpatterns = [
         "mhs/pendaftaran/",
         views.mahasiswa_pendaftaran_pkl,
         name="mahasiswa_pendaftaran_pkl",
-    ),    
+    ),
 ]
 
 if settings.DEBUG:
