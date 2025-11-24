@@ -110,56 +110,30 @@
             <h5 class="mb-0">Form Pendaftaran PKL</h5>
         </div>
         <div class="card-body">
+            {% if is_locked %}
+                <div class="alert alert-info">
+                    Pendaftaran PKL Anda sudah
+                    <strong>{{ pendaftaran.get_status_display }}</strong>
+                    sehingga tidak dapat diubah lagi.
+                </div>
+            {% endif %}
+
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label" for="{{ form.periode.id_for_label }}">Periode PKL</label>
-                        {{ form.periode }}
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label" for="{{ form.mitra.id_for_label }}">Perusahaan / Mitra</label>
-                        {{ form.mitra }}
-                        <div class="form-text">
-                            Jika mitra belum ada di daftar, hubungi koordinator PKL.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label" for="{{ form.jenis_pkl.id_for_label }}">Jenis PKL</label>
-                        {{ form.jenis_pkl }}
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label" for="{{ form.surat_penerimaan.id_for_label }}">
-                            Surat penerimaan
-                        </label>
-                        {{ form.surat_penerimaan }}
-                        <div class="form-text">
-                            Disarankan format PDF atau gambar (maks. beberapa MB).
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label" for="{{ form.anggota_kelompok.id_for_label }}">
-                        Anggota kelompok (jika PKL kelompok)
-                    </label>
-                    {{ form.anggota_kelompok }}
-                    <div class="form-text">
-                        Tulis NIM dan nama anggota lain (jika ada). Jika individu, boleh dikosongkan.
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-primary">
-                    Simpan & Ajukan Pendaftaran
-                </button>
+                {% if is_locked %}
+                    <fieldset disabled>
+                        {{ form.as_p }}
+                    </fieldset>
+                {% else %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary mt-2">
+                        Kirim Pendaftaran
+                    </button>
+                {% endif %}
             </form>
         </div>
     </div>
-
 </div>
 </body>
 </html>

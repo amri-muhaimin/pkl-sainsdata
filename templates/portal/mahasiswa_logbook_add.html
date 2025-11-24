@@ -108,10 +108,17 @@
                     <label class="form-label" for="{{ form.output.id_for_label }}">Output / hasil kerja</label>
                     {{ form.output }}
                 </div>
+                <div class="d-flex gap-2 mt-3">
+                    <!-- Simpan sebagai draft -->
+                    <button type="submit" name="save_draft" class="btn btn-outline-secondary">
+                        Simpan sebagai Draft
+                    </button>
 
-                <button type="submit" class="btn btn-primary">
-                    Simpan Logbook
-                </button>
+                    <!-- Simpan & ajukan ke dosen -->
+                    <button type="submit" name="submit_logbook" class="btn btn-primary">
+                        Simpan & Ajukan ke Dosen
+                    </button>
+                </div>
             </form>
         </div>
     </div>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Detail Pendaftaran PKL - {{ pendaftaran.mahasiswa.nama }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    >
+</head>
+<body>
+<div class="container my-4">
+
+    <div class="mb-3">
+        <a href="{% url 'portal:koordinator_pendaftaran_list' %}" class="btn btn-sm btn-outline-secondary">
+            &larr; Kembali ke daftar
+        </a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Detail Pendaftaran PKL</strong>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Tanggal Pengajuan</dt>
+                <dd class="col-sm-9">{{ pendaftaran.tanggal_pengajuan }}</dd>
+
+                <dt class="col-sm-3">Mahasiswa</dt>
+                <dd class="col-sm-9">
+                    {{ pendaftaran.mahasiswa.nim }} - {{ pendaftaran.mahasiswa.nama }}
+                </dd>
+
+                <dt class="col-sm-3">Periode</dt>
+                <dd class="col-sm-9">{{ pendaftaran.periode.nama_periode }}</dd>
+
+                <dt class="col-sm-3">Mitra</dt>
+                <dd class="col-sm-9">{{ pendaftaran.mitra.nama }}</dd>
+
+                <dt class="col-sm-3">Jenis PKL</dt>
+                <dd class="col-sm-9">{{ pendaftaran.get_jenis_pkl_display }}</dd>
+
+                <dt class="col-sm-3">Anggota Kelompok</dt>
+                <dd class="col-sm-9">
+                    {{ pendaftaran.anggota_kelompok|default:"-"|linebreaksbr }}
+                </dd>
+
+                <dt class="col-sm-3">Status</dt>
+                <dd class="col-sm-9">{{ pendaftaran.get_status_display }}</dd>
+
+                <dt class="col-sm-3">Surat Penerimaan</dt>
+                <dd class="col-sm-9">
+                    {% if pendaftaran.surat_penerimaan %}
+                        <a href="{{ pendaftaran.surat_penerimaan.url }}" target="_blank">
+                            Lihat / Unduh Surat Penerimaan
+                        </a>
+                    {% else %}
+                        <span class="text-muted">Belum ada file terunggah.</span>
+                    {% endif %}
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    {% if pendaftaran.status == "DIKIRIM" %}
+        <div class="card">
+            <div class="card-header">
+                <strong>Verifikasi Pendaftaran</strong>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    Silakan pilih tindakan untuk pendaftaran ini.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="action" value="setujui"
+                                class="btn btn-success">
+                            Setujui
+                        </button>
+                        <button type="submit" name="action" value="tolak"
+                                class="btn btn-danger">
+                            Tolak
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Pendaftaran ini sudah diproses dengan status:
+            <strong>{{ pendaftaran.get_status_display }}</strong>.
+        </div>
+    {% endif %}
+
+</div>
+</body>
+</html>
