@@ -74,7 +74,6 @@
 </head>
 <body>
 <div class="container my-4 page-shell">
-
     <!-- Header -->
     <div class="navbar-lite px-4 py-3 mb-4 d-flex justify-content-between align-items-center">
         <div>
@@ -85,14 +84,24 @@
         </div>
         <div class="text-end navbar-user">
             <div class="mb-1">
-                Login sebagai: <strong>{{ dosen.nama }}</strong>
+                Login sebagai: <strong>{{ dosen.nama }}</strong> (Koordinator PKL)
             </div>
-            <a href="{% url 'portal:logout' %}" class="btn btn-outline-light btn-sm">
-                Logout
-            </a>
+            <div class="mb-1">
+                <a href="{% url 'portal:dosen_dashboard' %}"
+                   class="btn btn-sm btn-light me-1">
+                    Dashboard Dosen
+                </a>
+                <a href="{% url 'portal:koordinator_seminar_list' %}"
+                   class="btn btn-sm btn-outline-light me-1">
+                    Seminar Hasil PKL
+                </a>
+                <a href="{% url 'portal:logout' %}" class="btn btn-outline-light btn-sm">
+                    Logout
+                </a>
+            </div>
         </div>
     </div>
-
+    
     <!-- Stat Cards -->
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-4">
@@ -114,21 +123,58 @@
             </div>
         </div>
     </div>
+    
+    <!-- Ringkasan Seminar Hasil PKL -->
+    <div class="card section-card mb-4">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="section-title mb-0">Seminar Hasil PKL</h5>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'portal:koordinator_seminar_list' %}"
+                   class="btn btn-sm btn-outline-primary">
+                    Kelola &amp; Jadwalkan Seminar
+                </a>
+                <a href="{% url 'portal:koordinator_pemetaan' %}"
+                   class="btn btn-sm btn-outline-success">
+                    Pemetaan Dosen Pembimbing
+                </a>
+                <a href="{% url 'portal:koordinator_dosen_kuota' %}"
+                   class="btn btn-sm btn-outline-secondary">
+                    Atur Kuota Pembimbing
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-6 col-md-4">
+                    <div class="stat-label">Menunggu penjadwalan</div>
+                    <div class="stat-value">
+                        {{ seminar_summary.menunggu }}
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="stat-label">Sudah dijadwalkan</div>
+                    <div class="stat-value">
+                        {{ seminar_summary.dijadwalkan }}
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="stat-label">Selesai</div>
+                    <div class="stat-value">
+                        {{ seminar_summary.selesai }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Tabel pendaftaran terbaru -->
     <div class="card section-card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="section-title mb-0">Pendaftaran Terbaru</h5>
-            <div class="d-flex gap-2">
-                <a href="{% url 'portal:koordinator_pendaftaran_list' %}"
-                class="btn btn-sm btn-outline-primary">
-                    Lihat semua pendaftaran
-                </a>
-                <a href="{% url 'portal:koordinator_pemetaan' %}"
-                class="btn btn-sm btn-success">
-                    Pemetaan Dosen Pembimbing
-                </a>
-            </div>
+            <a href="{% url 'portal:koordinator_pendaftaran_list' %}"
+               class="btn btn-sm btn-outline-primary">
+                Lihat semua pendaftaran
+            </a>
         </div>
         <div class="card-body p-0">
             {% if latest %}

@@ -283,4 +283,77 @@ class PendaftaranPKL(models.Model):
         if self.status == "DISETUJUI" and self.dosen_pembimbing:
             self.sinkron_ke_mahasiswa()
 
-    
+class SeminarHasilPKL(models.Model):
+    STATUS_CHOICES = [
+        ("DIKIRIM", "Diajukan"),
+        ("DIJADWALKAN", "Dijadwalkan"),
+        ("SELESAI", "Selesai"),
+        ("DITOLAK", "Ditolak"),
+    ]
+
+    mahasiswa = models.ForeignKey(
+        Mahasiswa,
+        on_delete=models.CASCADE,
+        related_name="seminar_pkl",
+    )
+    periode = models.ForeignKey(
+        PeriodePKL,
+        on_delete=models.PROTECT,
+        related_name="seminar_pkl",
+    )
+    dosen_pembimbing = models.ForeignKey(
+        Dosen,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="seminar_pkl_dibimbing",
+        help_text="Biasanya otomatis mengikuti dosen pembimbing PKL.",
+    )
+
+    judul_laporan = models.CharField(max_length=255)
+    file_laporan = models.FileField(
+        upload_to="laporan_pkl/",
+        help_text="Upload laporan PKL (PDF).",
+    )
+
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default="DIKIRIM",
+    )
+
+    dosen_penguji_1 = models.ForeignKey(
+        Dosen,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="seminar_pkl_diuji_1",
+    )
+    dosen_penguji_2 = models.ForeignKey(
+        Dosen,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="seminar_pkl_diuji_2",
+    )
+    jadwal = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Tanggal & jam seminar hasil PKL.",
+    )
+    ruang = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Ruang ujian / link meeting.",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Seminar Hasil PKL"
+        verbose_name_plural = "Seminar Hasil PKL"
+        unique_together = ("mahasiswa", "periode")
+
+    def __str__(self):
+        return f"Seminar {self.mahasiswa.nim} - {self.periode}"

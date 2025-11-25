@@ -58,11 +58,28 @@ urlpatterns = [
         views.koordinator_pendaftaran_detail,
         name="koordinator_pendaftaran_detail",
     ),
-        path(
+    path(
         "koor/pemetaan/",
         views.koordinator_pemetaan,
         name="koordinator_pemetaan",
     ),
+    path(
+        "koor/seminar/",
+        views.koordinator_seminar_list,
+        name="koordinator_seminar_list",
+    ),
+    path(
+        "koor/seminar/<int:pk>/",
+        views.koordinator_seminar_detail,
+        name="koordinator_seminar_detail",
+    ),
+    path(
+        "koor/dosen/kuota/",
+        views.koordinator_dosen_kuota,
+        name="koordinator_dosen_kuota",
+    ),
+
+
 
 
     # Mahasiswa
@@ -81,6 +98,11 @@ urlpatterns = [
         "mhs/pendaftaran/",
         views.mahasiswa_pendaftaran_pkl,
         name="mahasiswa_pendaftaran_pkl",
+    ),
+    path(
+        "mhs/seminar/",
+        views.mahasiswa_seminar_pendaftaran,
+        name="mahasiswa_seminar_pendaftaran",
     ),
 ]
 

@@ -1,7 +1,15 @@
 from django import forms
 from guidance.models import GuidanceSession
 from logbook.models import LogbookEntry
-from masterdata.models import PendaftaranPKL
+from django.core.exceptions import ValidationError
+
+from masterdata.models import (
+    PendaftaranPKL,
+    SeminarHasilPKL,
+    Dosen,
+    Mitra,
+)
+
 
 
 class DateInput(forms.DateInput):
@@ -83,9 +91,37 @@ class MahasiswaLogbookForm(forms.ModelForm):
         }
 
 class PendaftaranPKLMahasiswaForm(forms.ModelForm):
+    mitra_baru_nama = forms.CharField(
+        required=False,
+        label="Nama Mitra/Perusahaan (baru)",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Isi jika mitra belum ada di daftar",
+            }
+        ),
+    )
+    mitra_baru_alamat = forms.CharField(
+        required=False,
+        label="Alamat Mitra/Perusahaan",
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 2,
+                "placeholder": "Alamat lengkap mitra",
+            }
+        ),
+    )
+
     class Meta:
         model = PendaftaranPKL
-        fields = ["periode", "mitra", "jenis_pkl", "anggota_kelompok", "surat_penerimaan"]
+        fields = [
+            "periode",
+            "mitra",
+            "jenis_pkl",
+            "anggota_kelompok",
+            "surat_penerimaan",
+        ]
         widgets = {
             "periode": forms.Select(attrs={"class": "form-select"}),
             "mitra": forms.Select(attrs={"class": "form-select"}),
@@ -94,3 +130,104 @@ class PendaftaranPKLMahasiswaForm(forms.ModelForm):
                 attrs={"class": "form-control", "rows": 3}
             ),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        mitra = cleaned.get("mitra")
+        mitra_baru_nama = cleaned.get("mitra_baru_nama")
+
+        # Wajib: pilih mitra yang ada ATAU isi mitra baru
+        if not mitra and not mitra_baru_nama:
+            raise forms.ValidationError(
+                "Silakan pilih mitra yang sudah ada atau isi nama mitra baru."
+            )
+        return cleaned
+
+class SeminarHasilMahasiswaForm(forms.ModelForm):
+    class Meta:
+        model = SeminarHasilPKL
+        fields = ["judul_laporan", "file_laporan"]
+        widgets = {
+            "judul_laporan": forms.TextInput(
+                attrs={"class": "form-control"}
+            ),
+            "file_laporan": forms.ClearableFileInput(
+                attrs={"class": "form-control"}
+            ),
+        }
+
+RUANG_SEMINAR_CHOICES = [
+    ("Ruang Rapat Prodi", "Ruang Rapat Prodi"),
+    ("10.2 Twin Tower", "10.2 Twin Tower"),
+    ("10.3 Twin Tower", "10.3 Twin Tower"),
+    ("Ruang 108 FIK 2", "Ruang 108 FIK 2"),
+    ("Ruang Lab Sains Data", "Ruang Lab Sains Data"),
+    ("Ruang 202 FIK 1", "Ruang 202 FIK 1"),
+    ("Ruang 304 FIK 1", "Ruang 304 FIK 1"),
+]
+
+class SeminarPenjadwalanForm(forms.ModelForm):
+    # Ruang dibatasi ke pilihan tertentu
+    ruang = forms.ChoiceField(
+        choices=RUANG_SEMINAR_CHOICES,
+        required=True,
+        label="Ruang Seminar",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    class Meta:
+        model = SeminarHasilPKL
+        fields = ["dosen_penguji_1", "dosen_penguji_2", "jadwal", "ruang"]
+        widgets = {
+            "dosen_penguji_1": forms.Select(attrs={"class": "form-select"}),
+            "dosen_penguji_2": forms.Select(attrs={"class": "form-select"}),
+            "jadwal": forms.DateTimeInput(
+                attrs={"class": "form-control", "type": "datetime-local"}
+            ),
+            # ruang pakai field di atas
+        }
+
+    def __init__(self, *args, **kwargs):
+        seminar = kwargs.get("instance", None)
+        super().__init__(*args, **kwargs)
+
+        # Kedua penguji wajib
+        self.fields["dosen_penguji_1"].required = True
+        self.fields["dosen_penguji_2"].required = True
+
+        # Kalau sudah ada pembimbing → exclude dari pilihan penguji
+        if seminar and seminar.dosen_pembimbing_id:
+            qs = Dosen.objects.exclude(pk=seminar.dosen_pembimbing_id)
+            self.fields["dosen_penguji_1"].queryset = qs
+            self.fields["dosen_penguji_2"].queryset = qs
+
+    def clean(self):
+        cleaned = super().clean()
+        d1 = cleaned.get("dosen_penguji_1")
+        d2 = cleaned.get("dosen_penguji_2")
+        jadwal = cleaned.get("jadwal")
+        ruang = cleaned.get("ruang")
+        seminar = self.instance
+
+        # Wajib dua penguji
+        if not d1 or not d2:
+            raise ValidationError("Dua dosen penguji wajib dipilih.")
+
+        # Tidak boleh sama
+        if d1 == d2:
+            raise ValidationError("Dosen penguji 1 dan 2 tidak boleh orang yang sama.")
+
+        # Tidak boleh dosen pembimbing
+        if seminar and seminar.dosen_pembimbing_id:
+            if d1.pk == seminar.dosen_pembimbing_id or d2.pk == seminar.dosen_pembimbing_id:
+                raise ValidationError("Dosen pembimbing tidak boleh menjadi dosen penguji.")
+
+        if not jadwal:
+            raise ValidationError("Jadwal seminar wajib diisi.")
+
+        if not ruang:
+            raise ValidationError("Ruang seminar wajib dipilih.")
+
+        return cleaned
+
+

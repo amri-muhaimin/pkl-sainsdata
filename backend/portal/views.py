@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Q
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden, HttpResponse
 from django.contrib.auth import logout
@@ -7,17 +7,24 @@ from django.contrib import messages
 from django.db import IntegrityError
 from django.utils import timezone
 import csv
-
-
-from masterdata.models import Dosen, Mahasiswa, PendaftaranPKL
 from logbook.models import LogbookEntry
 from guidance.models import GuidanceSession
+from masterdata.models import (
+    Dosen,
+    Mahasiswa,
+    PendaftaranPKL,
+    Mitra,
+    SeminarHasilPKL,
+)
 from .forms import (
     GuidanceSessionCreateForm,
     LogbookReviewForm,
     MahasiswaLogbookForm,
     PendaftaranPKLMahasiswaForm,
+    SeminarHasilMahasiswaForm,
+    SeminarPenjadwalanForm,
 )
+
 
 
 def portal_logout(request):
@@ -333,6 +340,14 @@ def koordinator_dashboard(request):
 
     latest = qs.order_by("-tanggal_pengajuan")[:10]
 
+    # === Tambahan: ringkasan seminar hasil PKL ===
+    seminar_qs = SeminarHasilPKL.objects.select_related("mahasiswa", "periode")
+    seminar_summary = {
+        "menunggu": seminar_qs.filter(status="DIKIRIM").count(),
+        "dijadwalkan": seminar_qs.filter(status="DIJADWALKAN").count(),
+        "selesai": seminar_qs.filter(status="SELESAI").count(),
+    }
+
     context = {
         "dosen": dosen,
         "summary": {
@@ -341,6 +356,9 @@ def koordinator_dashboard(request):
             "total_ditolak": total_ditolak,
         },
         "latest": latest,
+
+        # kirim ke template
+        "seminar_summary": seminar_summary,
     }
     return render(request, "portal/koordinator_dashboard.html", context)
 
@@ -552,7 +570,6 @@ def mahasiswa_dashboard(request):
 
     mhs = request.user.mahasiswa_profile
 
-    # ambil parameter filter periode dari query string (?periode=ID)
     periode_id = request.GET.get("periode")
 
     logbook_qs = LogbookEntry.objects.filter(mahasiswa=mhs)
@@ -566,7 +583,6 @@ def mahasiswa_dashboard(request):
         .order_by("-tanggal", "-dibuat_pada")
     )
 
-    # daftar periode yang pernah muncul di logbook mahasiswa
     periode_list = (
         LogbookEntry.objects.filter(mahasiswa=mhs, periode__isnull=False)
         .values("periode__id", "periode__nama_periode")
@@ -574,15 +590,31 @@ def mahasiswa_dashboard(request):
         .order_by("periode__tanggal_mulai")
     )
 
+    # === TAMBAHAN: info seminar & jumlah bimbingan selesai ===
+    seminar = None
+    if mhs.periode:
+        seminar = (
+            SeminarHasilPKL.objects.filter(mahasiswa=mhs, periode=mhs.periode)
+            .order_by("-created_at")
+            .first()
+        )
+
+    jumlah_bimbingan_selesai = GuidanceSession.objects.filter(
+        mahasiswa=mhs, status="DONE"
+    ).count()
+
     context = {
         "mahasiswa": mhs,
         "logbooks": logbooks,
         "guidances": guidances,
         "periode_list": periode_list,
         "periode_aktif_id": int(periode_id) if periode_id else None,
+
+        # kirim ke template
+        "seminar": seminar,
+        "jumlah_bimbingan_selesai": jumlah_bimbingan_selesai,
     }
     return render(request, "portal/mahasiswa_dashboard.html", context)
-
 
 
 @login_required
@@ -654,26 +686,31 @@ def mahasiswa_pendaftaran_pkl(request):
             request.FILES,
             instance=pendaftaran,
         )
-        if form.is_valid():
-            obj = form.save(commit=False)
-            obj.mahasiswa = mhs
-            obj.status = "DIKIRIM"
-            try:
-                obj.save()
-            except IntegrityError:
-                messages.error(
-                    request,
-                    "Anda sudah memiliki pendaftaran aktif pada periode ini.",
-                )
-                return redirect("portal:mahasiswa_pendaftaran_pkl")
+    if form.is_valid():
+        obj = form.save(commit=False)
+        obj.mahasiswa = mhs
 
-            messages.success(
-                request,
-                "Pendaftaran PKL berhasil dikirim. Menunggu verifikasi koordinator.",
+        # --- handle mitra baru di sini ---
+        mitra = form.cleaned_data.get("mitra")
+        mitra_baru_nama = form.cleaned_data.get("mitra_baru_nama")
+        mitra_baru_alamat = form.cleaned_data.get("mitra_baru_alamat")
+
+        if not mitra and mitra_baru_nama:
+            mitra = Mitra.objects.create(
+                nama=mitra_baru_nama,
+                alamat=mitra_baru_alamat or "",
             )
-            return redirect("portal:mahasiswa_pendaftaran_pkl")
-        else:
-            messages.error(request, "Silakan periksa kembali data pendaftaran.")
+        obj.mitra = mitra
+        # --- selesai handle mitra baru ---
+
+        obj.status = "DIKIRIM"
+        obj.save()
+
+        messages.success(
+            request,
+            "Pendaftaran PKL berhasil dikirim. Menunggu verifikasi koordinator.",
+        )
+        return redirect("portal:mahasiswa_pendaftaran_pkl")
     else:
         form = PendaftaranPKLMahasiswaForm(instance=pendaftaran)
 
@@ -684,4 +721,222 @@ def mahasiswa_pendaftaran_pkl(request):
         "is_locked": is_locked,
     }
     return render(request, "portal/mahasiswa_pendaftaran_pkl.html", context)
+
+@login_required
+def mahasiswa_seminar_pendaftaran(request):
+    if not hasattr(request.user, "mahasiswa_profile"):
+        return HttpResponseForbidden("Akun ini tidak terhubung dengan data Mahasiswa.")
+
+    mhs = request.user.mahasiswa_profile
+
+    # Hitung jumlah bimbingan dengan status DONE
+    jumlah_bimbingan_selesai = GuidanceSession.objects.filter(
+        mahasiswa=mhs, status="DONE"
+    ).count()
+
+    # Syarat: minimal 6 bimbingan selesai + sudah punya pembimbing & periode PKL
+    eligible = (
+        jumlah_bimbingan_selesai >= 6
+        and mhs.dosen_pembimbing is not None
+        and mhs.periode is not None
+    )
+
+    seminar = None
+    if mhs.periode:
+        seminar = (
+            SeminarHasilPKL.objects.filter(mahasiswa=mhs, periode=mhs.periode)
+            .order_by("-created_at")
+            .first()
+        )
+
+    is_locked = seminar is not None and seminar.status != "DIKIRIM"
+
+    if request.method == "POST":
+        if not eligible:
+            messages.error(
+                request,
+                "Anda belum memenuhi syarat pendaftaran seminar hasil PKL "
+                "(minimal 6x bimbingan selesai dan sudah ada dosen pembimbing & periode PKL).",
+            )
+            return redirect("portal:mahasiswa_seminar_pendaftaran")
+
+        form = SeminarHasilMahasiswaForm(
+            request.POST,
+            request.FILES,
+            instance=seminar,
+        )
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.mahasiswa = mhs
+            obj.periode = mhs.periode
+            obj.dosen_pembimbing = mhs.dosen_pembimbing
+            obj.status = "DIKIRIM"
+            obj.save()
+
+            messages.success(
+                request,
+                "Pendaftaran seminar hasil PKL berhasil dikirim. "
+                "Menunggu penjadwalan oleh koordinator PKL.",
+            )
+            return redirect("portal:mahasiswa_seminar_pendaftaran")
+        else:
+            messages.error(request, "Silakan periksa kembali isian pendaftaran seminar.")
+    else:
+        form = SeminarHasilMahasiswaForm(instance=seminar)
+
+    context = {
+        "mahasiswa": mhs,
+        "form": form,
+        "seminar": seminar,
+        "jumlah_bimbingan_selesai": jumlah_bimbingan_selesai,
+        "eligible": eligible,
+        "is_locked": is_locked,
+    }
+    return render(request, "portal/mahasiswa_seminar_pendaftaran.html", context)
+
+@login_required
+def koordinator_seminar_list(request):
+    dosen, error = _require_koordinator(request)
+    if error:
+        return error
+
+    status_filter = request.GET.get("status", "")
+    seminars = (
+        SeminarHasilPKL.objects
+        .select_related("mahasiswa", "dosen_pembimbing", "periode")
+        .order_by("status", "jadwal", "mahasiswa__nim")
+    )
+    if status_filter:
+        seminars = seminars.filter(status=status_filter)
+
+    context = {
+        "dosen": dosen,
+        "seminars": seminars,
+        "status_filter": status_filter,
+    }
+    return render(request, "portal/koordinator_seminar_list.html", context)
+
+
+@login_required
+def koordinator_seminar_detail(request, pk: int):
+    dosen, error = _require_koordinator(request)
+    if error:
+        return error
+
+    seminar = get_object_or_404(
+        SeminarHasilPKL.objects.select_related(
+            "mahasiswa",
+            "mahasiswa__dosen_pembimbing",
+            "mahasiswa__mitra",
+            "periode",
+            "dosen_pembimbing",
+            "dosen_penguji_1",
+            "dosen_penguji_2",
+        ),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        form = SeminarPenjadwalanForm(request.POST, instance=seminar)
+        if form.is_valid():
+            cleaned = form.cleaned_data
+            d1 = cleaned["dosen_penguji_1"]
+            d2 = cleaned["dosen_penguji_2"]
+            jadwal = cleaned["jadwal"]
+            ruang = cleaned["ruang"]
+
+            # --- Cek bentrok ruang ---
+            conflict_ruang = SeminarHasilPKL.objects.filter(
+                jadwal=jadwal,
+                ruang=ruang,
+            ).exclude(pk=seminar.pk).exists()
+
+            # --- Cek bentrok dosen penguji ---
+            conflict_dosen = SeminarHasilPKL.objects.filter(
+                jadwal=jadwal,
+            ).exclude(pk=seminar.pk).filter(
+                Q(dosen_penguji_1__in=[d1, d2]) |
+                Q(dosen_penguji_2__in=[d1, d2])
+            ).exists()
+
+            if conflict_ruang:
+                form.add_error(
+                    "ruang",
+                    "Ruang ini sudah digunakan untuk seminar lain pada jam tersebut.",
+                )
+
+            if conflict_dosen:
+                form.add_error(
+                    None,
+                    "Salah satu dosen penguji sudah dijadwalkan menguji mahasiswa lain "
+                    "pada jam tersebut.",
+                )
+
+            if conflict_ruang or conflict_dosen:
+                messages.error(
+                    request,
+                    "Penjadwalan tidak valid, silakan periksa pesan kesalahan di formulir.",
+                )
+            else:
+                obj = form.save(commit=False)
+                # Jika jadwal & dua penguji terisi → DIJADWALKAN
+                obj.status = "DIJADWALKAN"
+                obj.save()
+                messages.success(request, "Penjadwalan seminar berhasil disimpan.")
+                return redirect("portal:koordinator_seminar_detail", pk=seminar.pk)
+        else:
+            messages.error(request, "Silakan periksa kembali isian penjadwalan.")
+    else:
+        form = SeminarPenjadwalanForm(instance=seminar)
+
+    context = {
+        "dosen": dosen,
+        "seminar": seminar,
+        "form": form,
+    }
+    return render(request, "portal/koordinator_seminar_detail.html", context)
+
+@login_required
+def koordinator_dosen_kuota(request):
+    dosen_koor, error = _require_koordinator(request)
+    if error:
+        return error
+
+    qs = (
+        Dosen.objects.all()
+        .annotate(jumlah_bimbingan=Count("mahasiswa_bimbingan"))
+        .order_by("nama")
+    )
+
+    if request.method == "POST":
+        dosen_id = request.POST.get("dosen_id")
+        kuota = request.POST.get("kuota_bimbingan")
+
+        try:
+            target = Dosen.objects.get(pk=dosen_id)
+        except Dosen.DoesNotExist:
+            messages.error(request, "Dosen tidak ditemukan.")
+            return redirect("portal:koordinator_dosen_kuota")
+
+        try:
+            kuota_val = int(kuota)
+            if kuota_val < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            messages.error(request, "Kuota harus berupa angka bulat >= 0.")
+            return redirect("portal:koordinator_dosen_kuota")
+
+        target.kuota_bimbingan = kuota_val
+        target.save()
+        messages.success(
+            request,
+            f"Kuota bimbingan untuk {target.nama} diubah menjadi {kuota_val} mahasiswa.",
+        )
+        return redirect("portal:koordinator_dosen_kuota")
+
+    context = {
+        "dosen_koor": dosen_koor,
+        "dosen_list": qs,
+    }
+    return render(request, "portal/koordinator_dosen_kuota.html", context)
 
