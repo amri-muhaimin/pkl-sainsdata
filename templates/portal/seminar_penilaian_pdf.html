@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Berita Acara Penilaian Seminar PKL</title>
+    <style>
+        body {
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 11pt;
+        }
+        .header-title {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .header-title h2 {
+            margin: 0;
+            font-size: 14pt;
+        }
+        .header-title h3 {
+            margin: 0;
+            font-size: 12pt;
+        }
+        .info-table, .nilai-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .info-table td {
+            padding: 3px;
+        }
+        .nilai-table th, .nilai-table td {
+            border: 1px solid #000;
+            padding: 3px;
+            text-align: center;
+        }
+        .ttd-container {
+            width: 100%;
+            margin-top: 30px;
+        }
+        .ttd-col {
+            width: 50%;
+            float: left;
+            text-align: center;
+        }
+        .ttd-space {
+            height: 60px; /* ruang kosong tanda tangan */
+        }
+        .clearfix {
+            clear: both;
+        }
+    </style>
+</head>
+<body>
+<div class="header-title">
+    <h2>BERITA ACARA PENILAIAN SEMINAR HASIL PKL</h2>
+    <h3>PROGRAM STUDI SAINS DATA</h3>
+</div>
+
+<table class="info-table">
+    <tr>
+        <td style="width: 25%;">Nama Mahasiswa</td>
+        <td style="width: 3%;">:</td>
+        <td>{{ seminar.mahasiswa.nama }}</td>
+    </tr>
+    <tr>
+        <td>NIM</td>
+        <td>:</td>
+        <td>{{ seminar.mahasiswa.nim }}</td>
+    </tr>
+    <tr>
+        <td>Judul Laporan</td>
+        <td>:</td>
+        <td>{{ seminar.judul_laporan }}</td> <!-- SESUAIKAN field -->
+    </tr>
+    <tr>
+        <td>Tanggal / Waktu</td>
+        <td>:</td>
+        <td>{{ seminar.jadwal }}</td>         <!-- SESUAIKAN format -->
+    </tr>
+    <tr>
+        <td>Ruang</td>
+        <td>:</td>
+        <td>{{ seminar.ruang }}</td>          <!-- SESUAIKAN -->
+    </tr>
+    <tr>
+        <td>Dosen Pembimbing</td>
+        <td>:</td>
+        <td>{{ seminar.dosen_pembimbing.nama }}</td>
+    </tr>
+</table>
+
+<h4>Rincian Penilaian</h4>
+<table class="nilai-table">
+    <thead>
+    <tr>
+        <th rowspan="2">Penguji</th>
+        <th colspan="5">Aspek Penilaian (0 &ndash; 100)</th>
+        <th rowspan="2">Rata-rata</th>
+        <th rowspan="2">Nilai Huruf</th>
+    </tr>
+    <tr>
+        <th>Pemahaman</th>
+        <th>Laporan</th>
+        <th>Presentasi</th>
+        <th>Penguasaan Lapangan</th>
+        <th>Sikap</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for a in assessments %}
+        <tr>
+            <td>{{ a.penguji.nama }}</td>
+            <td>{{ a.pemahaman_materi }}</td>
+            <td>{{ a.kualitas_laporan }}</td>
+            <td>{{ a.presentasi }}</td>
+            <td>{{ a.penguasaan_lapangan }}</td>
+            <td>{{ a.sikap_profesional }}</td>
+            <td>{{ a.nilai_angka }}</td>
+            <td>{{ a.nilai_huruf }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% if final_score %}
+<p>
+    Nilai akhir seminar (rata-rata dari semua penguji) adalah:
+    <strong>{{ final_score }}</strong> ({{ final_grade }}).
+</p>
+{% else %}
+<p>Penilaian belum lengkap, nilai akhir belum dapat dihitung.</p>
+{% endif %}
+
+<div class="ttd-container">
+    <div class="ttd-col">
+        <p>Penguji 1</p>
+        <div class="ttd-space">
+            {# Jika ada field tanda_tangan (ImageField) di model Dosen:
+            {% if seminar.dosen_penguji_1.tanda_tangan %}
+                <img src="{{ seminar.dosen_penguji_1.tanda_tangan.url }}" height="60">
+            {% endif %}
+            #}
+        </div>
+        <p><u>{{ seminar.dosen_penguji_1.nama }}</u></p>
+    </div>
+
+    <div class="ttd-col">
+        <p>Penguji 2</p>
+        <div class="ttd-space">
+            {# Jika ada field tanda_tangan (ImageField) di model Dosen:
+            {% if seminar.dosen_penguji_2.tanda_tangan %}
+                <img src="{{ seminar.dosen_penguji_2.tanda_tangan.url }}" height="60">
+            {% endif %}
+            #}
+        </div>
+        <p><u>{{ seminar.dosen_penguji_2.nama }}</u></p>
+    </div>
+
+    <div class="clearfix"></div>
+</div>
+
+</body>
+</html>

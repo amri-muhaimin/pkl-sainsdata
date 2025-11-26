@@ -2,9 +2,10 @@
 # backend/masterdata/models.py
 import os
 
+from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db import models
 
 
 def validate_surat_penerimaan_file(file_obj):
@@ -282,6 +283,163 @@ class PendaftaranPKL(models.Model):
         # Jika sudah disetujui dan dosen pembimbing sudah diisi → sinkron ke Mahasiswa
         if self.status == "DISETUJUI" and self.dosen_pembimbing:
             self.sinkron_ke_mahasiswa()
+
+
+class SeminarAssessment(models.Model):
+    """
+    Penilaian seminar hasil PKL oleh masing-masing dosen penguji.
+    Satu SeminarHasilPKL bisa punya 2 assessment: dari penguji 1 & penguji 2.
+    """
+
+    GRADE_CHOICES = [
+        ("A", "A"),
+        ("A-", "A-"),
+        ("B+", "B+"),
+        ("B", "B"),
+        ("B-", "B-"),
+        ("C+", "C+"),
+        ("C", "C"),
+        ("C-", "C-"),
+        ("D+", "D+"),
+        ("D", "D"),
+        ("E", "E"),
+    ]
+
+    seminar = models.ForeignKey(
+        "SeminarHasilPKL",           # SESUAIKAN nama model seminar
+        on_delete=models.CASCADE,
+        related_name="assessments",
+    )
+    penguji = models.ForeignKey(
+        "Dosen",                     # SESUAIKAN jika model dosen beda
+        on_delete=models.CASCADE,
+        related_name="seminar_assessments",
+    )
+
+    # 5 aspek penilaian (0–100)
+    pemahaman_materi = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Pemahaman materi, latar belakang, dan tujuan PKL"
+    )
+    kualitas_laporan = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Kerapian & kelengkapan laporan PKL"
+    )
+    presentasi = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Kemampuan presentasi & komunikasi"
+    )
+    penguasaan_lapangan = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Penguasaan hasil, data, dan proses kerja di lapangan"
+    )
+    sikap_profesional = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Sikap, etika, dan kedisiplinan selama seminar"
+    )
+
+    # hasil olahan
+    nilai_angka = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        editable=False,
+    )
+    nilai_huruf = models.CharField(
+        max_length=2,
+        choices=GRADE_CHOICES,
+        editable=False,
+    )
+
+    catatan = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("seminar", "penguji")
+        verbose_name = "Penilaian Seminar PKL"
+        verbose_name_plural = "Penilaian Seminar PKL"
+
+    def __str__(self):
+        return f"{self.seminar} - {self.penguji} ({self.nilai_huruf})"
+
+    # ---- util internal ----
+    def hitung_rata_rata(self):
+        aspek_fields = [
+            "pemahaman_materi",
+            "kualitas_laporan",
+            "presentasi",
+            "penguasaan_lapangan",
+            "sikap_profesional",
+        ]
+        
+        scores = []
+
+        for fname in aspek_fields:
+            value = getattr(self, fname, None)
+            if value is not None:
+                scores.append(value)
+
+        if not scores:
+            return None
+        
+        return sum(scores)/len(scores)
+
+    @staticmethod
+    def konversi_nilai_huruf(nilai: float) -> str:
+        """
+        Konversi 0–100 ke huruf berdasarkan tabel yang Bapak kirim:
+        A  : 81–100
+        A- : 76–80
+        B+ : 72–75
+        B  : 68–71
+        B- : 64–67
+        C+ : 58–63
+        C  : 54–57
+        C- : 50–53
+        D+ : 46–49
+        D  : 42–45
+        E  : 0–41
+        """
+        if nilai >= 81:
+            return "A"
+        elif nilai >= 76:
+            return "A-"
+        elif nilai >= 72:
+            return "B+"
+        elif nilai >= 68:
+            return "B"
+        elif nilai >= 64:
+            return "B-"
+        elif nilai >= 58:
+            return "C+"
+        elif nilai >= 54:
+            return "C"
+        elif nilai >= 50:
+            return "C-"
+        elif nilai >= 46:
+            return "D+"
+        elif nilai >= 42:
+            return "D"
+        else:
+            return "E"
+
+    def save(self, *args, **kwargs):
+        avg = self.hitung_rata_rata()
+
+        if avg is not None:
+            # pastikan dibulatkan hanya jika sudah ada nilai
+            avg = round(float(avg), 2)
+            self.nilai_angka = avg
+            self.nilai_huruf = self.konversi_nilai_huruf(avg)
+        else:
+            # belum ada nilai yang diisi → kosongkan field nilai
+            self.nilai_angka = None
+            self.nilai_huruf = None
+
+        super().save(*args, **kwargs)
+
+
 
 class SeminarHasilPKL(models.Model):
     STATUS_CHOICES = [

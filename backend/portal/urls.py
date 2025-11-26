@@ -3,7 +3,6 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from django.urls import path
-
 from . import views
 
 app_name = "portal"
@@ -40,6 +39,41 @@ urlpatterns = [
         "dosen/guidance/export/",
         views.dosen_guidance_export,
         name="dosen_guidance_export",
+    ),
+    path(
+        "dosen/bimbingan/",
+        views.dosen_guidance_list,
+        name="dosen_guidance_list",
+    ),
+    path(
+        "dosen/bimbingan/<int:pk>/",
+        views.dosen_guidance_detail,
+        name="dosen_guidance_detail",
+    ),
+     path(
+        "dosen/seminar/",
+        views.dosen_seminar_list,
+        name="dosen_seminar_list",
+    ),
+    path(
+        "dosen/seminar/<int:pk>/",
+        views.dosen_seminar_detail,
+        name="dosen_seminar_detail",
+    ),
+    path(
+        "dosen/seminar/<int:pk>/penilaian/",
+        views.dosen_seminar_penilaian,
+        name="dosen_seminar_penilaian",
+    ),
+    path(
+        "dosen/seminar/<int:pk>/penilaian/pdf/",
+        views.seminar_penilaian_pdf,
+        name="seminar_penilaian_pdf",
+    ),
+    path(
+        "koordinator/seminar/<int:pk>/",
+        views.koordinator_seminar_detail,
+        name="koordinator_seminar_detail",
     ),
 
     # Koordinator PKL
@@ -104,6 +138,17 @@ urlpatterns = [
         views.mahasiswa_seminar_pendaftaran,
         name="mahasiswa_seminar_pendaftaran",
     ),
+    path(
+        "mhs/bimbingan/",
+        views.mahasiswa_guidance_list,
+        name="mahasiswa_guidance_list",
+    ),
+    path(
+        "mhs/bimbingan/baru/",
+        views.mahasiswa_guidance_create,
+        name="mahasiswa_guidance_create",
+    ),
+
 ]
 
 if settings.DEBUG:

@@ -9,12 +9,14 @@ from django.utils import timezone
 import csv
 from logbook.models import LogbookEntry
 from guidance.models import GuidanceSession
+from .pdf_utils import render_to_pdf
 from masterdata.models import (
     Dosen,
     Mahasiswa,
     PendaftaranPKL,
     Mitra,
     SeminarHasilPKL,
+    SeminarAssessment,
 )
 from .forms import (
     GuidanceSessionCreateForm,
@@ -23,9 +25,10 @@ from .forms import (
     PendaftaranPKLMahasiswaForm,
     SeminarHasilMahasiswaForm,
     SeminarPenjadwalanForm,
+    MahasiswaGuidanceForm,
+    DosenGuidanceValidationForm,
+    SeminarAssessmentForm,
 )
-
-
 
 def portal_logout(request):
     logout(request)
@@ -259,6 +262,227 @@ def dosen_logbook_export(request):
     return response
 
 @login_required
+def dosen_guidance_list(request):
+    """
+    Dosen melihat semua sesi bimbingan dari mahasiswa bimbingannya.
+    Tidak bisa membuat sesi baru dari sini.
+    """
+    if not hasattr(request.user, "dosen_profile"):
+        return HttpResponseForbidden("Akun ini tidak terhubung dengan data Dosen.")
+
+    dosen = request.user.dosen_profile
+
+    sessions = (
+        GuidanceSession.objects
+        .filter(dosen_pembimbing=dosen)   # sesuaikan nama FK kalau beda
+        .select_related("mahasiswa")
+        .order_by("-tanggal", "-id")      # pakai -id kalau tidak ada created_at
+    )
+
+    context = {
+        "dosen": dosen,
+        "sessions": sessions,
+    }
+    return render(request, "portal/dosen_guidance_list.html", context)
+
+
+@login_required
+def dosen_guidance_detail(request, pk: int):
+    """
+    Dosen membuka satu sesi bimbingan (yang dia bimbing) dan
+    mem-validasi statusnya.
+    """
+    if not hasattr(request.user, "dosen_profile"):
+        return HttpResponseForbidden("Akun ini tidak terhubung dengan data Dosen.")
+
+    dosen = request.user.dosen_profile
+
+    session = get_object_or_404(
+        GuidanceSession.objects.select_related("mahasiswa"),
+        pk=pk,
+        dosen_pembimbing=dosen,   # agar dosen hanya bisa akses miliknya sendiri
+    )
+
+    if request.method == "POST":
+        form = DosenGuidanceValidationForm(request.POST, instance=session)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Status bimbingan berhasil diperbarui.")
+            return redirect("portal:dosen_guidance_detail", pk=session.pk)
+        else:
+            messages.error(request, "Silakan periksa kembali isian formulir.")
+    else:
+        form = DosenGuidanceValidationForm(instance=session)
+
+    context = {
+        "dosen": dosen,
+        "session": session,
+        "form": form,
+    }
+    return render(request, "portal/dosen_guidance_detail.html", context)
+
+@login_required
+def dosen_seminar_list(request):
+    """
+    Daftar semua seminar PKL di mana dosen ini menjadi penguji
+    (penguji 1 atau penguji 2).
+    """
+    if not hasattr(request.user, "dosen_profile"):
+        return HttpResponseForbidden("Akun ini tidak terhubung dengan data Dosen.")
+
+    dosen = request.user.dosen_profile
+
+    seminars = (
+        SeminarHasilPKL.objects
+        .filter(Q(dosen_penguji_1=dosen) | Q(dosen_penguji_2=dosen))
+        .select_related("mahasiswa", "dosen_pembimbing")
+        .order_by("jadwal")   # sesuaikan dengan field jadwal di model
+    )
+
+    context = {
+        "dosen": dosen,
+        "seminars": seminars,
+    }
+    return render(request, "portal/dosen_seminar_list.html", context)
+
+
+
+@login_required
+def dosen_seminar_detail(request, pk: int):
+    """
+    Halaman detail seminar untuk dosen (pembimbing atau penguji).
+    Menampilkan info seminar + ringkasan penilaian.
+    """
+    if not hasattr(request.user, "dosen_profile"):
+        return HttpResponseForbidden("Akun ini tidak terhubung dengan data Dosen.")
+
+    dosen = request.user.dosen_profile
+    seminar = get_object_or_404(SeminarHasilPKL, pk=pk)
+
+    # hanya pembimbing / penguji yang boleh lihat
+    if (
+        seminar.dosen_pembimbing != dosen
+        and seminar.dosen_penguji_1 != dosen
+        and seminar.dosen_penguji_2 != dosen
+    ):
+        return HttpResponseForbidden("Anda tidak berhak mengakses seminar ini.")
+
+    assessments = (
+        SeminarAssessment.objects
+        .filter(seminar=seminar)
+        .select_related("penguji")
+    )
+
+    final_score = None
+    final_grade = None
+    if assessments.exists():
+        total = sum(float(a.nilai_angka) for a in assessments)
+        final_score = round(total / assessments.count(), 2)
+        final_grade = SeminarAssessment.konversi_nilai_huruf(final_score)
+
+    context = {
+        "dosen": dosen,
+        "seminar": seminar,
+        "assessments": assessments,
+        "final_score": final_score,
+        "final_grade": final_grade,
+    }
+    return render(request, "portal/dosen_seminar_detail.html", context)
+
+
+@login_required
+def dosen_seminar_penilaian(request, pk: int):
+    """
+    Halaman form penilaian seminar untuk dosen penguji.
+    Dosen hanya boleh menilai seminar di mana ia penguji_1 atau penguji_2.
+    """
+    if not hasattr(request.user, "dosen_profile"):
+        return HttpResponseForbidden("Akun ini tidak terhubung dengan data Dosen.")
+
+    dosen = request.user.dosen_profile
+    seminar = get_object_or_404(SeminarHasilPKL, pk=pk)
+
+    # hanya penguji 1/2 yang boleh masuk
+    if seminar.dosen_penguji_1 != dosen and seminar.dosen_penguji_2 != dosen:
+        return HttpResponseForbidden("Anda bukan dosen penguji pada seminar ini.")
+
+    # cari penilaian yang sudah pernah dibuat oleh dosen ini (kalau ada)
+    assessment = SeminarAssessment.objects.filter(
+        seminar=seminar,
+        penguji=dosen,
+    ).first()
+
+    if request.method == "POST":
+        form = SeminarAssessmentForm(request.POST, instance=assessment)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.seminar = seminar
+            obj.penguji = dosen
+            obj.save()  # di sini baru disimpan / dibuat
+
+            messages.success(
+                request,
+                f"Penilaian seminar untuk {seminar.mahasiswa.nama} berhasil disimpan."
+            )
+            return redirect("portal:dosen_seminar_detail", pk=seminar.pk)
+        else:
+            messages.error(request, "Silakan periksa kembali nilai yang diinput.")
+    else:
+        form = SeminarAssessmentForm(instance=assessment)
+
+    context = {
+        "dosen": dosen,
+        "seminar": seminar,
+        "assessment": assessment,
+        "form": form,
+    }
+    return render(request, "portal/dosen_seminar_penilaian.html", context)
+
+
+
+
+@login_required
+def seminar_penilaian_pdf(request, pk: int):
+    """
+    Generate PDF rekap penilaian seminar (untuk arsip/berita acara).
+    Hanya bisa diakses oleh dosen pembimbing atau penguji.
+    """
+    seminar = get_object_or_404(SeminarHasilPKL, pk=pk)
+
+    # batasi akses: dosen terkait saja
+    if hasattr(request.user, "dosen_profile"):
+        dosen = request.user.dosen_profile
+        if (
+            seminar.dosen_pembimbing != dosen
+            and seminar.dosen_penguji_1 != dosen
+            and seminar.dosen_penguji_2 != dosen
+        ):
+            return HttpResponseForbidden("Anda tidak berhak mengakses dokumen ini.")
+
+    assessments = (
+        SeminarAssessment.objects
+        .filter(seminar=seminar)
+        .select_related("penguji")
+    )
+
+    final_score = None
+    final_grade = None
+    if assessments.exists():
+        total = sum(float(a.nilai_angka) for a in assessments)
+        final_score = round(total / assessments.count(), 2)
+        final_grade = SeminarAssessment.konversi_nilai_huruf(final_score)
+
+    context = {
+        "seminar": seminar,
+        "assessments": assessments,
+        "final_score": final_score,
+        "final_grade": final_grade,
+    }
+    return render_to_pdf("portal/seminar_penilaian_pdf.html", context)
+
+
+
+@login_required
 def dosen_guidance_export(request):
     if not hasattr(request.user, "dosen_profile"):
         return HttpResponseForbidden("Akun ini tidak terhubung dengan data Dosen.")
@@ -361,6 +585,7 @@ def koordinator_dashboard(request):
         "seminar_summary": seminar_summary,
     }
     return render(request, "portal/koordinator_dashboard.html", context)
+
 
 
 @login_required
@@ -618,6 +843,74 @@ def mahasiswa_dashboard(request):
 
 
 @login_required
+def mahasiswa_guidance_list(request):
+    if not hasattr(request.user, "mahasiswa_profile"):
+        return HttpResponseForbidden("Akun ini tidak terhubung dengan data Mahasiswa.")
+
+    mhs = request.user.mahasiswa_profile
+
+    sessions = (
+        GuidanceSession.objects.filter(mahasiswa=mhs)
+        .order_by("-tanggal", "-id")   # ganti: hilangkan '-created_at'
+    )
+
+    jumlah_selesai = sessions.filter(status="DONE").count()
+
+    context = {
+        "mahasiswa": mhs,
+        "sessions": sessions,
+        "jumlah_selesai": jumlah_selesai,
+    }
+    return render(request, "portal/mahasiswa_guidance_list.html", context)
+
+
+@login_required
+def mahasiswa_guidance_create(request):
+    """
+    Mahasiswa mengisi data bimbingan: tanggal, topik, ringkasan, dll.
+    Sistem akan otomatis mengisi mahasiswa, dosen_pembimbing, dan status awal PLANNED.
+    """
+    if not hasattr(request.user, "mahasiswa_profile"):
+        return HttpResponseForbidden("Akun ini tidak terhubung dengan data Mahasiswa.")
+
+    mhs = request.user.mahasiswa_profile
+
+    if not mhs.dosen_pembimbing:
+        messages.error(
+            request,
+            "Dosen pembimbing PKL belum ditetapkan. Silakan hubungi koordinator PKL."
+        )
+        return redirect("portal:mahasiswa_guidance_list")
+
+    if request.method == "POST":
+        form = MahasiswaGuidanceForm(request.POST)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.mahasiswa = mhs
+            obj.dosen_pembimbing = mhs.dosen_pembimbing  # SESUAIKAN nama field FK di model
+            # jika GuidanceSession punya field periode dan mahasiswa punya periode aktif:
+            if hasattr(mhs, "periode") and hasattr(obj, "periode"):
+                obj.periode = mhs.periode
+            obj.status = "PLANNED"  # status awal: diajukan / direncanakan
+            obj.save()
+            messages.success(
+                request,
+                "Data bimbingan berhasil diajukan dan menunggu validasi dosen."
+            )
+            return redirect("portal:mahasiswa_guidance_list")
+        else:
+            messages.error(request, "Silakan periksa kembali isian formulir.")
+    else:
+        form = MahasiswaGuidanceForm()
+
+    context = {
+        "mahasiswa": mhs,
+        "form": form,
+    }
+    return render(request, "portal/mahasiswa_guidance_form.html", context)
+
+
+@login_required
 def mahasiswa_logbook_add(request):
     if not hasattr(request.user, "mahasiswa_profile"):
         return HttpResponseForbidden("Akun ini tidak terhubung dengan data Mahasiswa.")
@@ -658,69 +951,70 @@ def mahasiswa_logbook_add(request):
 
 @login_required
 def mahasiswa_pendaftaran_pkl(request):
+    """
+    Halaman pendaftaran PKL untuk mahasiswa.
+    - Menampilkan form pendaftaran.
+    - Kalau sudah DISETUJUI / DITOLAK, form dikunci (hanya bisa lihat).
+    """
+    # pastikan user punya profil mahasiswa
     if not hasattr(request.user, "mahasiswa_profile"):
         return HttpResponseForbidden("Akun ini tidak terhubung dengan data Mahasiswa.")
 
     mhs = request.user.mahasiswa_profile
 
-    # Ambil pendaftaran terakhir (jika ada)
+    # ambil pendaftaran terakhir milik mahasiswa ini (kalau ada)
     pendaftaran = (
         PendaftaranPKL.objects.filter(mahasiswa=mhs)
-        .order_by("-tanggal_pengajuan")
+        .order_by("-id")
         .first()
     )
 
-    # Dikunci kalau sudah diproses
-    is_locked = bool(pendaftaran and pendaftaran.status in ("DISETUJUI", "DITOLAK"))
+    # status yang membuat form terkunci
+    locked_statuses = ["DISETUJUI", "DITOLAK"]
+    is_locked = bool(pendaftaran and pendaftaran.status in locked_statuses)
 
     if request.method == "POST":
+        # kalau sudah locked, jangan izinkan submit ulang
         if is_locked:
             messages.error(
                 request,
-                "Pendaftaran PKL Anda sudah diproses dan tidak dapat diubah lagi.",
+                "Pendaftaran PKL Anda sudah dikunci "
+                "karena telah berstatus {} dan tidak dapat diubah lagi."
+                .format(pendaftaran.get_status_display() if pendaftaran else "-")
             )
             return redirect("portal:mahasiswa_pendaftaran_pkl")
 
+        # proses form POST
         form = PendaftaranPKLMahasiswaForm(
             request.POST,
             request.FILES,
             instance=pendaftaran,
         )
-    if form.is_valid():
-        obj = form.save(commit=False)
-        obj.mahasiswa = mhs
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.mahasiswa = mhs
 
-        # --- handle mitra baru di sini ---
-        mitra = form.cleaned_data.get("mitra")
-        mitra_baru_nama = form.cleaned_data.get("mitra_baru_nama")
-        mitra_baru_alamat = form.cleaned_data.get("mitra_baru_alamat")
+            # kalau model punya field periode & mahasiswa punya periode, isi otomatis
+            if hasattr(mhs, "periode") and hasattr(obj, "periode") and obj.periode is None:
+                obj.periode = mhs.periode
 
-        if not mitra and mitra_baru_nama:
-            mitra = Mitra.objects.create(
-                nama=mitra_baru_nama,
-                alamat=mitra_baru_alamat or "",
-            )
-        obj.mitra = mitra
-        # --- selesai handle mitra baru ---
-
-        obj.status = "DIKIRIM"
-        obj.save()
-
-        messages.success(
-            request,
-            "Pendaftaran PKL berhasil dikirim. Menunggu verifikasi koordinator.",
-        )
-        return redirect("portal:mahasiswa_pendaftaran_pkl")
+            obj.save()
+            messages.success(request, "Pendaftaran PKL berhasil dikirim.")
+            return redirect("portal:mahasiswa_pendaftaran_pkl")
+        else:
+            messages.error(request, "Silakan periksa kembali isian formulir pendaftaran PKL.")
     else:
+        # GET: tampilkan form (diisi dengan data lama kalau ada)
         form = PendaftaranPKLMahasiswaForm(instance=pendaftaran)
 
     context = {
         "mahasiswa": mhs,
-        "form": form,
         "pendaftaran": pendaftaran,
         "is_locked": is_locked,
+        "form": form,
     }
     return render(request, "portal/mahasiswa_pendaftaran_pkl.html", context)
+
 
 @login_required
 def mahasiswa_seminar_pendaftaran(request):

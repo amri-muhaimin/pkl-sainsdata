@@ -54,3 +54,4 @@ class LogbookEntry(models.Model):
 
     def __str__(self) -> str:
         return f"{self.mahasiswa.nim} - {self.tanggal} ({self.get_status_display()})"
+

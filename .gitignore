@@ -3,28 +3,24 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
 .env/
 .venv/
 env/
-
-# Virtual env di project (kalau nanti ada)
-env/
 venv/
-.venv/
 
 # VS Code / IDE
 .vscode/
 .idea/
 
-# OS files
-.DS_Store
-Thumbs.db
-
 # Django
 db.sqlite3
+*.sqlite3
 /static/
-media/          # ignore folder media di mana pun
-backend/media/  # eksplisit ignore media upload backend
+media/
+staticfiles/
+
+# Logs
 *.log
 
 # Node (kalau nanti ada frontend)

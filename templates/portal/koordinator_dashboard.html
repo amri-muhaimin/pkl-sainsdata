@@ -74,7 +74,7 @@
 </head>
 <body>
 <div class="container my-4 page-shell">
-    <!-- Header -->
+        <!-- Header -->
     <div class="navbar-lite px-4 py-3 mb-4 d-flex justify-content-between align-items-center">
         <div>
             <h1>Dashboard Koordinator PKL</h1>
@@ -94,6 +94,10 @@
                 <a href="{% url 'portal:koordinator_seminar_list' %}"
                    class="btn btn-sm btn-outline-light me-1">
                     Seminar Hasil PKL
+                </a>
+                <a href="{% url 'portal:dosen_guidance_list' %}"
+                    class="btn btn-sm btn-outline-light me-1">
+                    Bimbingan PKL
                 </a>
                 <a href="{% url 'portal:logout' %}" class="btn btn-outline-light btn-sm">
                     Logout

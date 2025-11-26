@@ -68,7 +68,7 @@
         <div>
             <h1>Dashboard Mahasiswa PKL</h1>
             <div class="navbar-sub">
-                Catat aktivitas harian, pantau status logbook, dan lihat riwayat bimbingan.
+                Catat aktivitas harian, pantau status logbook, dan lihat/ajukan sesi bimbingan.
             </div>
         </div>
         <div class="text-end">
@@ -76,7 +76,7 @@
                 Login sebagai: <strong>{{ mahasiswa.nama }}</strong>
             </div>
             <a href="{% url 'portal:mahasiswa_pendaftaran_pkl' %}"
-            class="btn btn-light btn-sm me-2">
+               class="btn btn-light btn-sm me-2">
                 Pendaftaran PKL
             </a>
             <a href="{% url 'portal:logout' %}" class="btn btn-outline-light btn-sm">
@@ -133,7 +133,7 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Seminar Hasil PKL</h5>
             <a href="{% url 'portal:mahasiswa_seminar_pendaftaran' %}"
-            class="btn btn-sm btn-primary">
+               class="btn btn-sm btn-primary">
                 Daftar / Lihat Status
             </a>
         </div>
@@ -259,9 +259,15 @@
 
     <!-- Bimbingan -->
     <div class="card section-card mb-4">
-        <div class="card-header">
+        <!-- BAGIAN INI YANG DIREVISI -->
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="section-title mb-0">Sesi Bimbingan</h5>
+            <a href="{% url 'portal:mahasiswa_guidance_create' %}"
+               class="btn btn-primary btn-sm">
+                + Ajukan Bimbingan
+            </a>
         </div>
+        <!-- END REVISI HEADER -->
         <div class="card-body p-0">
             {% if guidances %}
                 <div class="table-responsive">

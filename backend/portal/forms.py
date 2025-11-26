@@ -8,6 +8,7 @@ from masterdata.models import (
     SeminarHasilPKL,
     Dosen,
     Mitra,
+    SeminarAssessment,
 )
 
 
@@ -90,6 +91,83 @@ class MahasiswaLogbookForm(forms.ModelForm):
             ),
         }
 
+
+class MahasiswaGuidanceForm(forms.ModelForm):
+    """
+    Form yang dipakai MAHASISWA untuk mengisi/mengajukan sesi bimbingan.
+    Field yang muncul hanya yang memang perlu diisi mahasiswa.
+    """
+
+    class Meta:
+        model = GuidanceSession
+        fields = [
+            "pertemuan_ke",
+            "tanggal",
+            "jam_mulai",
+            "jam_selesai",
+            "metode",
+            "platform",
+            "topik",
+            "ringkasan_diskusi",
+            "tindak_lanjut",
+        ]
+        widgets = {
+            "pertemuan_ke": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Nomor pertemuan, misalnya 1, 2, 3, ..."
+                }
+            ),
+            "tanggal": forms.DateInput(
+                attrs={"class": "form-control", "type": "date"}
+            ),
+            "jam_mulai": forms.TimeInput(
+                attrs={"class": "form-control", "type": "time"}
+            ),
+            "jam_selesai": forms.TimeInput(
+                attrs={"class": "form-control", "type": "time"}
+            ),
+            "metode": forms.Select(attrs={"class": "form-select"}),
+            "platform": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Ruang / link meeting"
+                }
+            ),
+            "topik": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Topik bimbingan"}
+            ),
+            "ringkasan_diskusi": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Ringkasan diskusi bimbingan"
+                }
+            ),
+            "tindak_lanjut": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Tugas / tindak lanjut setelah bimbingan"
+                }
+            ),
+        }
+
+class DosenGuidanceValidationForm(forms.ModelForm):
+    """
+    Dipakai dosen untuk memvalidasi sesi bimbingan.
+    Dosen cukup mengubah status (PLANNED -> DONE / CANCELLED).
+    Kalau nanti ingin ada catatan_dosen, tinggal tambah field-nya.
+    """
+
+    class Meta:
+        model = GuidanceSession
+        fields = ["status"]  # atau ["status", "catatan_dosen"] kalau field itu ada
+        widgets = {
+            "status": forms.Select(attrs={"class": "form-select"}),
+        }
+
+
 class PendaftaranPKLMahasiswaForm(forms.ModelForm):
     mitra_baru_nama = forms.CharField(
         required=False,
@@ -142,6 +220,52 @@ class PendaftaranPKLMahasiswaForm(forms.ModelForm):
                 "Silakan pilih mitra yang sudah ada atau isi nama mitra baru."
             )
         return cleaned
+
+
+class SeminarAssessmentForm(forms.ModelForm):
+    """
+    Diisi oleh dosen penguji (1 atau 2).
+    Sistem otomatis menghitung rata-rata & huruf nilai.
+    """
+
+    class Meta:
+        model = SeminarAssessment
+        fields = [
+            "pemahaman_materi",
+            "kualitas_laporan",
+            "presentasi",
+            "penguasaan_lapangan",
+            "sikap_profesional",
+            "catatan",
+        ]
+        widgets = {
+            "pemahaman_materi": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "max": 100}
+            ),
+            "kualitas_laporan": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "max": 100}
+            ),
+            "presentasi": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "max": 100}
+            ),
+            "penguasaan_lapangan": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "max": 100}
+            ),
+            "sikap_profesional": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "max": 100}
+            ),
+            "catatan": forms.Textarea(
+                attrs={"class": "form-control", "rows": 3, "placeholder": "Catatan penguji (opsional)"}
+            ),
+        }
+        labels = {
+            "pemahaman_materi": "Pemahaman materi & tujuan PKL",
+            "kualitas_laporan": "Kualitas & kerapian laporan",
+            "presentasi": "Kemampuan presentasi",
+            "penguasaan_lapangan": "Penguasaan hasil & proses di lapangan",
+            "sikap_profesional": "Sikap profesional & etika",
+        }
+
 
 class SeminarHasilMahasiswaForm(forms.ModelForm):
     class Meta:

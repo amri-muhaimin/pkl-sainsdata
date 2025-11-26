@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Detail Seminar PKL - {{ seminar.mahasiswa.nama }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-0">Detail Seminar PKL</h2>
+            <p class="text-muted mb-0">
+                Mahasiswa:
+                <strong>{{ seminar.mahasiswa.nim }} - {{ seminar.mahasiswa.nama }}</strong><br>
+                Dosen pembimbing: <strong>{{ seminar.dosen_pembimbing.nama }}</strong><br>
+                Penguji 1: <strong>{{ seminar.dosen_penguji_1.nama }}</strong> |
+                Penguji 2: <strong>{{ seminar.dosen_penguji_2.nama }}</strong>
+            </p>
+        </div>
+        <div class="text-end">
+            <a href="{% url 'portal:dosen_dashboard' %}"
+               class="btn btn-outline-secondary btn-sm mb-1">
+                &larr; Dashboard Dosen
+            </a>
+            <a href="{% url 'portal:dosen_seminar_penilaian' seminar.pk %}"
+                 class="btn btn-primary btn-sm mb-1">
+                 Isi / Ubah Penilaian
+            </a>
+            {% if final_score %}
+                <a href="{% url 'portal:seminar_penilaian_pdf' seminar.pk %}"
+                    class="btn btn-outline-secondary btn-sm mb-1" target="_blank">
+                    Unduh Berita Acara (PDF)
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card mb-3">
+        <div class="card-header">
+            Informasi Seminar
+        </div>
+        <div class="card-body">
+            <p class="mb-1"><strong>Judul Laporan:</strong> {{ seminar.judul_laporan }}</p> <!-- SESUAIKAN field -->
+            <p class="mb-1"><strong>Jadwal:</strong> {{ seminar.jadwal }}</p>                <!-- SESUAIKAN -->
+            <p class="mb-1"><strong>Ruang:</strong> {{ seminar.ruang }}</p>                  <!-- SESUAIKAN -->
+            <p class="mb-0"><strong>Status:</strong> {{ seminar.get_status_display }}</p>    <!-- SESUAIKAN kalau ada -->
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Rekap Penilaian Dosen Penguji
+        </div>
+        <div class="card-body p-0">
+            {% if assessments %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                        <tr>
+                            <th>Penguji</th>
+                            <th>Pemahaman</th>
+                            <th>Laporan</th>
+                            <th>Presentasi</th>
+                            <th>Penguasaan Lapangan</th>
+                            <th>Sikap</th>
+                            <th>Nilai Angka</th>
+                            <th>Nilai Huruf</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for a in assessments %}
+                            <tr>
+                                <td>{{ a.penguji.nama }}</td>
+                                <td>{{ a.pemahaman_materi }}</td>
+                                <td>{{ a.kualitas_laporan }}</td>
+                                <td>{{ a.presentasi }}</td>
+                                <td>{{ a.penguasaan_lapangan }}</td>
+                                <td>{{ a.sikap_profesional }}</td>
+                                <td>{{ a.nilai_angka }}</td>
+                                <td>{{ a.nilai_huruf }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-3 border-top">
+                    <strong>Nilai akhir (rata-rata penguji):</strong>
+                    {% if final_score %}
+                        {{ final_score }} ({{ final_grade }})
+                    {% else %}
+                        Belum lengkap.
+                    {% endif %}
+                </div>
+            {% else %}
+                <p class="p-3 mb-0 text-muted">
+                    Belum ada penilaian yang tersimpan.
+                    Silakan klik tombol <strong>Isi / Ubah Penilaian</strong>.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+</body>
+</html>

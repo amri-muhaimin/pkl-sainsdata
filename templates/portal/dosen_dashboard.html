@@ -93,7 +93,6 @@
 </head>
 <body>
 <div class="container my-4 page-shell">
-
     <!-- Header / Navbar -->
     <div class="navbar-lite px-4 py-3 mb-4 d-flex justify-content-between align-items-center">
         <div>
@@ -106,6 +105,14 @@
             <div class="mb-1">
                 Login sebagai: <strong>{{ dosen.nama }}</strong>
             </div>
+            <a href="{% url 'portal:dosen_guidance_list' %}"
+                class="btn btn-sm btn-outline-light me-1">
+                 Bimbingan PKL
+            </a>
+            <a href="{% url 'portal:dosen_seminar_list' %}"
+                class="btn btn-sm btn-light me-1">
+                Seminar PKL
+            </a>
             <a href="{% url 'portal:logout' %}" class="btn btn-outline-light btn-sm">
                 Logout
             </a>
