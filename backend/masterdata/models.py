@@ -8,15 +8,34 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
 
-def validate_surat_penerimaan_file(file_obj):
-    ext = os.path.splitext(file_obj.name)[1].lower()
-    allowed_ext = [".pdf", ".jpg", ".jpeg", ".png"]
-    if ext not in allowed_ext:
-        raise ValidationError("File harus berformat PDF, JPG, JPEG, atau PNG.")
+import os
+from django.conf import settings
 
-    max_size_mb = 2
-    if file_obj.size > max_size_mb * 1024 * 1024:
-        raise ValidationError(f"Ukuran file maksimal {max_size_mb} MB.")
+
+def validate_surat_penerimaan_file(file_obj):
+    """
+    Validasi file surat penerimaan:
+    - hanya mengizinkan ekstensi tertentu (misal: .pdf)
+    - membatasi ukuran maksimum berdasarkan konfigurasi settings.SURAT_PENERIMAAN_MAX_SIZE_MB
+    """
+
+    # 1) Validasi ekstensi
+    allowed_extensions = [".pdf"]
+    ext = os.path.splitext(file_obj.name)[1].lower()
+    if ext not in allowed_extensions:
+        raise ValidationError(
+            "Format file tidak didukung. Unggah file dalam bentuk PDF."
+        )
+
+    # 2) Validasi ukuran berdasarkan konfigurasi
+    max_mb = getattr(settings, "SURAT_PENERIMAAN_MAX_SIZE_MB", 2.0)
+    max_bytes = int(max_mb * 1024 * 1024)
+
+    if file_obj.size > max_bytes:
+        raise ValidationError(
+            f"Ukuran file terlalu besar. Maksimal {max_mb:.0f} MB."
+        )
+
 
 
 class Dosen(models.Model):
@@ -257,32 +276,28 @@ class PendaftaranPKL(models.Model):
         return f"Pendaftaran PKL {self.mahasiswa.nim} - {self.periode}"
 
     def sinkron_ke_mahasiswa(self):
-        """
-        Jika pendaftaran disetujui, sinkronkan data ke Mahasiswa:
-        - periode
-        - mitra
-        - dosen_pembimbing
-        - status_pkl = 'SEDANG'
-        """
-        m = self.mahasiswa
-        if self.periode:
-            m.periode = self.periode
-        if self.mitra:
-            m.mitra = self.mitra
-        if self.dosen_pembimbing:
-            m.dosen_pembimbing = self.dosen_pembimbing
-        # asumsikan Mahasiswa punya field status_pkl
-        try:
-            m.status_pkl = "SEDANG"
-        except Exception:
-            pass
-        m.save()
+        mhs = self.mahasiswa
+        if self.status != "DISETUJUI":
+            return
+
+        # contoh logika sinkron:
+        if self.periode is not None:
+            mhs.periode = self.periode
+        if self.mitra is not None:
+            mhs.mitra = self.mitra
+        if self.dosen_pembimbing is not None:
+            mhs.dosen_pembimbing = self.dosen_pembimbing
+
+        # misalnya: set status PKL mahasiswa
+        if mhs.status_pkl in (None, "", "BELUM"):
+            mhs.status_pkl = "SEDANG"
+
+        mhs.save(update_fields=["periode", "mitra", "dosen_pembimbing", "status_pkl"])
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # Jika sudah disetujui dan dosen pembimbing sudah diisi → sinkron ke Mahasiswa
-        if self.status == "DISETUJUI" and self.dosen_pembimbing:
-            self.sinkron_ke_mahasiswa()
+        # sinkron_ke_mahasiswa sekarang dipanggil via sinyal post_save
+
 
 
 class SeminarAssessment(models.Model):
