@@ -2,9 +2,16 @@
 
 from django.template.loader import get_template
 from django.http import HttpResponse
-from xhtml2pdf import pisa   # pastikan sudah: pip install xhtml2pdf
 
 def render_to_pdf(template_src, context_dict):
+    try:
+        from xhtml2pdf import pisa  # import lokal agar optional di lingkungan dev/CI
+    except ModuleNotFoundError as exc:  # pragma: no cover - hanya terjadi saat dependency belum terpasang
+        return HttpResponse(
+            "Dependensi xhtml2pdf belum terpasang. Install dengan `pip install xhtml2pdf`.",
+            status=500,
+        )
+
     template = get_template(template_src)
     html = template.render(context_dict)
 
