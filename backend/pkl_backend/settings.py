@@ -9,6 +9,7 @@ See https://docs.djangoproject.com/en/5.2/ for more details.
 from pathlib import Path
 import os
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 
@@ -22,22 +23,43 @@ load_dotenv(ENV_PATH)
 # Quick-start development settings - unsuitable for production
 # https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+
+ENVIRONMENT = os.getenv("DJANGO_ENV", "development").lower()
+IS_PRODUCTION = ENVIRONMENT == "production"
+
+
+def get_env_setting(key: str, default: str | None = None, required: bool = False) -> str:
+    """Return environment variable or raise if required and missing."""
+
+    value = os.getenv(key, default)
+    if required and not value:
+        raise ImproperlyConfigured(
+            f"Variabel environment {key} wajib diisi untuk menjalankan aplikasi."
+        )
+    return value or ""
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv(
+SECRET_KEY = get_env_setting(
     "DJANGO_SECRET_KEY",
-    "django-insecure-3w+o%6_joe03scik^fuw_gc**ei-1-(+kj^%xbktb)x+0ik%3+"  # fallback DEV saja
+    default="django-insecure-dev-placeholder",
+    required=IS_PRODUCTION,
 )
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
+DEBUG = os.getenv("DJANGO_DEBUG", "False" if IS_PRODUCTION else "True").lower() == "true"
 
 
 _raw_hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "")
 if _raw_hosts:
     ALLOWED_HOSTS: list[str] = [h.strip() for h in _raw_hosts.split(",") if h.strip()]
+elif IS_PRODUCTION:
+    raise ImproperlyConfigured(
+        "DJANGO_ALLOWED_HOSTS wajib diisi ketika menjalankan aplikasi di production."
+    )
 else:
-    ALLOWED_HOSTS: list[str] = []
+    ALLOWED_HOSTS: list[str] = ["localhost", "127.0.0.1"]
 
 
 
