@@ -1,0 +1,274 @@
+/* ====== Reset ringan & dasar ====== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f7fb;
+  color: #1f2933;
+}
+
+/* ====== Header & navigasi ====== */
+.portal-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: #0f172a;
+  color: #f9fafb;
+}
+
+.portal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.portal-logo {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-size: 1rem;
+}
+
+.portal-badge {
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.25);
+}
+
+.portal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* Navigasi utama */
+.portal-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.portal-nav::-webkit-scrollbar {
+  height: 4px;
+}
+.portal-nav::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 999px;
+}
+
+/* Link nav */
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: #e5e7eb;
+  text-decoration: none;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  background: rgba(148, 163, 184, 0.25);
+}
+
+.nav-link.active {
+  background: #e5e7eb;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Tombol */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: #f9fafb;
+}
+
+.btn-outline {
+  border: 1px solid #e5e7eb;
+  color: #e5e7eb;
+  background: transparent;
+}
+
+.btn-outline:hover {
+  background: #e5e7eb;
+  color: #0f172a;
+}
+
+/* ====== Layout utama ====== */
+.portal-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2rem;
+}
+
+/* Footer */
+.portal-footer {
+  text-align: center;
+  padding: 0.75rem 1rem 1.25rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* ====== Kartu & grid dashboard ====== */
+.dashboard-section {
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-section h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+}
+
+.dashboard-section p.section-subtitle {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.9rem;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.4rem;
+}
+
+.card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.card-meta {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.card-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+}
+
+.card-chip {
+  display: inline-flex;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* ====== Alert & notifikasi ====== */
+.portal-messages,
+.dashboard-notices {
+  margin-bottom: 1rem;
+}
+
+.alert {
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.alert-info {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.alert-success {
+  background: #ecfdf3;
+  color: #15803d;
+}
+
+.alert-warning {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.alert-danger {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* ====== Tabel ringkas ====== */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.table th,
+.table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.table th {
+  font-weight: 600;
+  color: #4b5563;
+  background: #f9fafb;
+}
+
+/* ====== Responsif kecil ====== */
+@media (max-width: 640px) {
+  .portal-header {
+    align-items: flex-start;
+  }
+
+  .portal-header-right {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .portal-main {
+    padding: 1rem 0.75rem 2rem;
+  }
+}
