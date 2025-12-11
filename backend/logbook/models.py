@@ -48,6 +48,17 @@ class LogbookEntry(models.Model):
     dibuat_pada = models.DateTimeField(auto_now_add=True)
     diupdate_pada = models.DateTimeField(auto_now=True)
 
+    def save(self, *args, **kwargs):
+        """Isi dosen pembimibng dan periode secara otomatis dari mahasiswa."""
+        
+        if self.mahasiswa:
+            if self.dosen_pembimbing is None:
+                self.dosen_pembimbing = self.mahasiswa.dosen_pembimbing
+        if self.periode is None:
+            self.periode = self.mahasiswa.periode
+        
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = "Logbook"
         verbose_name_plural = "Logbook"

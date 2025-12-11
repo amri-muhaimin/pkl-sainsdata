@@ -311,7 +311,7 @@ class SeminarPenjadwalanFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertFalse(form.is_valid())
         self.assertIn(
-            "Dua dosen penguji wajib dipilih.",
+            "Dosen pembimbing tidak boleh menjadi dosen penguji.",
             form.non_field_errors(),
         )
 
@@ -502,3 +502,12 @@ class LogbookEntryModelTests(TestCase):
         # cek status dalam bentuk label (mis. 'Diajukan ke dosen')
         self.assertIn(entry.get_status_display(), s)
 
+    def test_auto_fill_dosen_dan_periode_dari_mahasiswa(self):
+        entry = LogbookEntry.objects.create(
+            mahasiswa=self.mhs,
+            tanggal="2025-01-11",
+            aktivitas="Aktivitas tanpa dosen dan periode eksplisit",
+        )
+
+        self.assertEqual(entry.dosen_pembimbing, self.dosen)
+        self.assertEqual(entry.periode, self.periode)

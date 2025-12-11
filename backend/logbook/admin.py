@@ -42,12 +42,12 @@ class PeriodeAktifFilter(admin.SimpleListFilter):
         return queryset
 
 
-@admin.action(description="Tandai sebagai sudah ditinjau (REVIEWED)")
+@admin.action(description="Tandai sebagai disetujui (Disetujui)")
 def mark_as_reviewed(modeladmin, request, queryset):
-    updated = queryset.update(status="REVIEWED")
+    updated = queryset.update(status="DISETUJUI")
     modeladmin.message_user(
         request,
-        f"{updated} entri logbook ditandai sebagai REVIEWED."
+        f"{updated} entri logbook ditandai sebagai DISETUJUI."
     )
 
 

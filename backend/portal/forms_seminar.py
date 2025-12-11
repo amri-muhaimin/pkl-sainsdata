@@ -117,29 +117,41 @@ class SeminarPenjadwalanForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        raw_d1 = str(self.data.get("dosen_penguji_1") or "")
+        raw_d2 = str(self.data.get("dosen_penguji_2") or "")
+
         d1 = cleaned.get("dosen_penguji_1")
         d2 = cleaned.get("dosen_penguji_2")
         jadwal = cleaned.get("jadwal")
         ruang = cleaned.get("ruang")
         seminar = self.instance
 
+        errors: list[str] = []
+
         # Wajib dua penguji
         if not d1 or not d2:
-            raise ValidationError("Dua dosen penguji wajib dipilih.")
+            errors.append("Dua dosen penguji wajib dipilih.")
 
         # Tidak boleh sama
         if d1 == d2:
-            raise ValidationError("Dosen penguji 1 dan 2 tidak boleh orang yang sama.")
+            errors.append(
+                "Dosen penguji 1 dan 2 tidak boleh orang yang sama."
+            )
 
         # Tidak boleh dosen pembimbing
         if seminar and seminar.dosen_pembimbing_id:
-            if d1.pk == seminar.dosen_pembimbing_id or d2.pk == seminar.dosen_pembimbing_id:
-                raise ValidationError("Dosen pembimbing tidak boleh menjadi dosen penguji.")
+            pembimbing_id = seminar.dosen_pembimbing_id
+
+            if str(pembimbing_id) in (raw_d1, raw_d2):
+                errors.append("Dosen pembimibng tidak boleh menjadi dosen penguji.")
 
         if not jadwal:
-            raise ValidationError("Jadwal seminar wajib diisi.")
+            errors.append("Jadwal seminar wajib diisi.")
 
         if not ruang:
-            raise ValidationError("Ruang seminar wajib dipilih.")
+            errors.append("Ruang seminar wajib dipilih")
+
+        if errors:
+            raise ValidationError(errors)
 
         return cleaned
