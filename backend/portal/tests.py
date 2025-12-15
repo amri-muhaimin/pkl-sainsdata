@@ -282,27 +282,10 @@ class SeminarPenjadwalanFormTests(TestCase):
             ),
         )
 
-    def test_error_jika_penguji_sama(self):
-        form = SeminarPenjadwalanForm(
-            data={
-                "dosen_penguji_1": self.dosen_lain.pk,
-                "dosen_penguji_2": self.dosen_lain.pk,
-                "jadwal": "2025-01-10T08:00",
-                "ruang": "Ruang Rapat Prodi",
-            },
-            instance=self.seminar,
-        )
-        self.assertFalse(form.is_valid())
-        self.assertIn(
-            "Dosen penguji 1 dan 2 tidak boleh orang yang sama.",
-            form.non_field_errors(),
-        )
-
     def test_error_jika_penguji_sama_dengan_pembimbing(self):
         form = SeminarPenjadwalanForm(
             data={
-                "dosen_penguji_1": self.dosen_pembimbing.pk,
-                "dosen_penguji_2": self.dosen_lain.pk,
+                "dosen_penguji": self.dosen_pembimbing.pk,
                 "jadwal": "2025-01-10T08:00",
                 "ruang": "Ruang Rapat Prodi",
             },
@@ -315,21 +298,10 @@ class SeminarPenjadwalanFormTests(TestCase):
             form.non_field_errors(),
         )
 
-
     def test_valid_jika_input_benar(self):
-        user_dsn3 = User.objects.create_user(
-            username="dsn3", password="test"
-        )
-        dosen_lain2 = Dosen.objects.create(
-            user=user_dsn3,
-            nidn="9999",
-            nama="Dosen Penguji 2",
-        )
-
         form = SeminarPenjadwalanForm(
             data={
-                "dosen_penguji_1": self.dosen_lain.pk,
-                "dosen_penguji_2": dosen_lain2.pk,
+                "dosen_penguji": self.dosen_lain.pk,
                 "jadwal": "2025-01-10T08:00",
                 "ruang": "Ruang Rapat Prodi",
             },

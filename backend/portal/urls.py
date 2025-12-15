@@ -66,6 +66,11 @@ urlpatterns = [
         name="dosen_seminar_penilaian",
     ),
     path(
+        "dosen/seminar/<int:pk>/penilaian-pembimbing/",
+        views.dosen_pembimbing_penilaian,
+        name="dosen_pembimbing_penilaian",
+    ),
+    path(
         "dosen/seminar/<int:pk>/penilaian/pdf/",
         views.seminar_penilaian_pdf,
         name="seminar_penilaian_pdf",
