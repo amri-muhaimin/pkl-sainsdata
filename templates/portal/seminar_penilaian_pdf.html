@@ -89,19 +89,20 @@
     </tr>
 </table>
 
-<h4>Rincian Penilaian</h4>
-<table class="nilai-table">
-    <thead>
-    <tr>
-        <th rowspan="2">Penguji</th>
-        <th colspan="5">Aspek Penilaian (0 &ndash; 100)</th>
-        <th rowspan="2">Rata-rata</th>
-        <th rowspan="2">Nilai Huruf</th>
-    </tr>
-    <tr>
-        <th>Pemahaman</th>
-        <th>Laporan</th>
-        <th>Presentasi</th>
+    <h4>Rincian Penilaian</h4>
+    <table class="nilai-table">
+        <thead>
+        <tr>
+            <th rowspan="2">Penguji</th>
+            <th colspan="5">Aspek Penilaian (0 &ndash; 100)</th>
+            <th rowspan="2">Rata-rata</th>
+            <th rowspan="2">Nilai Huruf</th>
+            <th rowspan="2">Tanda Tangan Penguji</th>
+        </tr>
+        <tr>
+            <th>Pemahaman</th>
+            <th>Laporan</th>
+            <th>Presentasi</th>
         <th>Penguasaan Lapangan</th>
         <th>Sikap</th>
     </tr>
@@ -117,10 +118,17 @@
             <td>{{ a.sikap_profesional }}</td>
             <td>{{ a.nilai_angka }}</td>
             <td>{{ a.nilai_huruf }}</td>
+            <td>
+                <div class="ttd-space">
+                    {% if a.penguji.tanda_tangan %}
+                        <img src="{{ a.penguji.tanda_tangan.url }}" height="60">
+                    {% endif %}
+                </div>
+            </td>
         </tr>
     {% endfor %}
     </tbody>
-</table>
+    </table>
 
 {% if final_score %}
 <p>
@@ -131,33 +139,50 @@
 <p>Penilaian belum lengkap, nilai akhir belum dapat dihitung.</p>
 {% endif %}
 
+{% if pembimbing_assessment %}
+<h4>Penilaian Dosen Pembimbing</h4>
+<table class="nilai-table">
+    <thead>
+    <tr>
+        <th>Pembimbing</th>
+        <th>Pemahaman</th>
+        <th>Laporan</th>
+        <th>Presentasi</th>
+        <th>Penguasaan Lapangan</th>
+        <th>Sikap</th>
+        <th>Nilai Angka</th>
+        <th>Nilai Huruf</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td>{{ pembimbing_assessment.penguji.nama }}</td>
+        <td>{{ pembimbing_assessment.pemahaman_materi }}</td>
+        <td>{{ pembimbing_assessment.kualitas_laporan }}</td>
+        <td>{{ pembimbing_assessment.presentasi }}</td>
+        <td>{{ pembimbing_assessment.penguasaan_lapangan }}</td>
+        <td>{{ pembimbing_assessment.sikap_profesional }}</td>
+        <td>{{ pembimbing_assessment.nilai_angka }}</td>
+        <td>{{ pembimbing_assessment.nilai_huruf }}</td>
+    </tr>
+    </tbody>
+</table>
+{% endif %}
+
+{% if seminar.dosen_penguji %}
 <div class="ttd-container">
-    <div class="ttd-col">
-        <p>Penguji 1</p>
+    <div class="ttd-col" style="float: none; margin: 0 auto;">
+        <p>Penguji</p>
         <div class="ttd-space">
-            {# Jika ada field tanda_tangan (ImageField) di model Dosen:
-            {% if seminar.dosen_penguji_1.tanda_tangan %}
-                <img src="{{ seminar.dosen_penguji_1.tanda_tangan.url }}" height="60">
+            {% if seminar.dosen_penguji.tanda_tangan %}
+                <img src="{{ seminar.dosen_penguji.tanda_tangan.url }}" height="60">
             {% endif %}
-            #}
         </div>
-        <p><u>{{ seminar.dosen_penguji_1.nama }}</u></p>
+        <p><u>{{ seminar.dosen_penguji.nama }}</u></p>
     </div>
-
-    <div class="ttd-col">
-        <p>Penguji 2</p>
-        <div class="ttd-space">
-            {# Jika ada field tanda_tangan (ImageField) di model Dosen:
-            {% if seminar.dosen_penguji_2.tanda_tangan %}
-                <img src="{{ seminar.dosen_penguji_2.tanda_tangan.url }}" height="60">
-            {% endif %}
-            #}
-        </div>
-        <p><u>{{ seminar.dosen_penguji_2.nama }}</u></p>
-    </div>
-
     <div class="clearfix"></div>
 </div>
+{% endif %}
 
 </body>
 </html>

@@ -11,10 +11,8 @@
 <div class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h2 class="mb-0">Seminar PKL yang Diuji</h2>
-            <p class="text-muted mb-0">
-                Dosen penguji: <strong>{{ dosen.nama }}</strong>
-            </p>
+            <h2 class="mb-0">Seminar PKL</h2>
+            <p class="text-muted mb-0">Jadwal tempat Anda terdaftar sebagai pembimbing atau penguji.</p>
         </div>
         <div>
             <a href="{% url 'portal:dosen_dashboard' %}"
@@ -49,12 +47,12 @@
                                 <td>{{ s.ruang }}</td>   {# SESUAIKAN field ruang #}
                                 <td>{{ s.dosen_pembimbing.nama }}</td>
                                 <td>
-                                    {% if s.dosen_penguji_1_id == dosen.id %}
-                                        Penguji 1
-                                    {% elif s.dosen_penguji_2_id == dosen.id %}
-                                        Penguji 2
+                                    {% if s.dosen_pembimbing_id == dosen.id %}
+                                        Pembimbing
+                                    {% elif s.dosen_penguji_id == dosen.id %}
+                                        Penguji
                                     {% else %}
-                                        
+
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
@@ -62,10 +60,18 @@
                                          class="btn btn-sm btn-outline-secondary">
                                         Detail
                                     </a>
-                                    <a href="{% url 'portal:dosen_seminar_penilaian' s.pk %}"
-                                         class="btn btn-sm btn-primary">
-                                        Isi Penilaian
-                                    </a>
+                                    {% if s.dosen_penguji_id == dosen.id %}
+                                        <a href="{% url 'portal:dosen_seminar_penilaian' s.pk %}"
+                                             class="btn btn-sm btn-primary">
+                                            Isi Penilaian Penguji
+                                        </a>
+                                    {% endif %}
+                                    {% if s.dosen_pembimbing_id == dosen.id %}
+                                        <a href="{% url 'portal:dosen_pembimbing_penilaian' s.pk %}"
+                                           class="btn btn-sm btn-success">
+                                            Penilaian Pembimbing
+                                        </a>
+                                    {% endif %}
                                     <a href="{% url 'portal:seminar_penilaian_pdf' s.pk %}"
                                         class="btn btn-sm btn-outline-secondary" target="_blank">
                                         PDF

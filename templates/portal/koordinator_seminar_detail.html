@@ -71,15 +71,9 @@
                     Jadwal: <strong>{{ seminar.jadwal }}</strong>
                 </p>
             {% endif %}
-            {% if seminar.dosen_penguji_1 or seminar.dosen_penguji_2 %}
+            {% if seminar.dosen_penguji %}
                 <p class="mb-0">
-                    Dosen Penguji:
-                    <strong>
-                        {{ seminar.dosen_penguji_1.nama|default:"-" }}
-                        {% if seminar.dosen_penguji_2 %}
-                            , {{ seminar.dosen_penguji_2.nama }}
-                        {% endif %}
-                    </strong>
+                    Dosen Penguji: <strong>{{ seminar.dosen_penguji.nama }}</strong>
                 </p>
             {% endif %}
         </div>
@@ -102,15 +96,9 @@
                 {% csrf_token %}
 
                 <div class="mb-3">
-                    <label class="form-label">Dosen Penguji 1</label>
-                    {{ form.dosen_penguji_1 }}
-                    {{ form.dosen_penguji_1.errors }}
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Dosen Penguji 2 (opsional)</label>
-                    {{ form.dosen_penguji_2 }}
-                    {{ form.dosen_penguji_2.errors }}
+                    <label class="form-label">Dosen Penguji</label>
+                    {{ form.dosen_penguji }}
+                    {{ form.dosen_penguji.errors }}
                 </div>
 
                 <div class="mb-3">

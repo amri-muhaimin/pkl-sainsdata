@@ -302,8 +302,8 @@ class PendaftaranPKL(models.Model):
 
 class SeminarAssessment(models.Model):
     """
-    Penilaian seminar hasil PKL oleh masing-masing dosen penguji.
-    Satu SeminarHasilPKL bisa punya 2 assessment: dari penguji 1 & penguji 2.
+    Penilaian seminar hasil PKL oleh dosen penguji maupun dosen pembimbing.
+    Setiap kombinasi (seminar, penilai, peran) hanya boleh muncul sekali.
     """
 
     GRADE_CHOICES = [
@@ -320,6 +320,11 @@ class SeminarAssessment(models.Model):
         ("E", "E"),
     ]
 
+    ROLE_CHOICES = [
+        ("PENGUJI", "Dosen Penguji"),
+        ("PEMBIMBING", "Dosen Pembimbing"),
+    ]
+
     seminar = models.ForeignKey(
         "SeminarHasilPKL",           # SESUAIKAN nama model seminar
         on_delete=models.CASCADE,
@@ -329,6 +334,12 @@ class SeminarAssessment(models.Model):
         "Dosen",                     # SESUAIKAN jika model dosen beda
         on_delete=models.CASCADE,
         related_name="seminar_assessments",
+    )
+    role = models.CharField(
+        max_length=12,
+        choices=ROLE_CHOICES,
+        default="PENGUJI",
+        help_text="Peran penilai (penguji atau pembimbing).",
     )
 
     # 5 aspek penilaian (0–100)
@@ -371,12 +382,12 @@ class SeminarAssessment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("seminar", "penguji")
+        unique_together = ("seminar", "penguji", "role")
         verbose_name = "Penilaian Seminar PKL"
         verbose_name_plural = "Penilaian Seminar PKL"
 
     def __str__(self):
-        return f"{self.seminar} - {self.penguji} ({self.nilai_huruf})"
+        return f"{self.seminar} - {self.penguji} ({self.role}/{self.nilai_huruf})"
 
     # ---- util internal ----
     def hitung_rata_rata(self):
@@ -495,19 +506,13 @@ class SeminarHasilPKL(models.Model):
         default="DIKIRIM",
     )
 
-    dosen_penguji_1 = models.ForeignKey(
+    dosen_penguji = models.ForeignKey(
         Dosen,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="seminar_pkl_diuji_1",
-    )
-    dosen_penguji_2 = models.ForeignKey(
-        Dosen,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="seminar_pkl_diuji_2",
+        related_name="seminar_pkl_diuji",
+        help_text="Hanya satu dosen penguji, tidak boleh dosen pembimbing.",
     )
     jadwal = models.DateTimeField(
         null=True,

@@ -55,15 +55,10 @@
                 <br>
                 Jadwal seminar: <strong>{{ seminar.jadwal }}</strong>
             {% endif %}
-            {% if seminar.dosen_penguji_1 or seminar.dosen_penguji_2 %}
+            {% if seminar.dosen_penguji %}
                 <br>
                 Dosen penguji:
-                <strong>
-                    {{ seminar.dosen_penguji_1.nama|default:"-" }}
-                    {% if seminar.dosen_penguji_2 %}
-                        , {{ seminar.dosen_penguji_2.nama }}
-                    {% endif %}
-                </strong>
+                <strong>{{ seminar.dosen_penguji.nama|default:"-" }}</strong>
             {% endif %}
         </div>
     {% endif %}
