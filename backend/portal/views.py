@@ -11,6 +11,7 @@ from .views_dosen import (
     dosen_seminar_list,
     dosen_seminar_detail,
     dosen_seminar_penilaian,
+    dosen_pembimbing_penilaian,
     seminar_penilaian_pdf,
     koordinator_dashboard,
     koordinator_pendaftaran_list,
@@ -46,6 +47,7 @@ __all__ = [
     "dosen_seminar_list",
     "dosen_seminar_detail",
     "dosen_seminar_penilaian",
+    "dosen_pembimbing_penilaian",
     "seminar_penilaian_pdf",
     # Koordinator
     "koordinator_dashboard",
