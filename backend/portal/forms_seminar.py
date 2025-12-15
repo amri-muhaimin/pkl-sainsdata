@@ -143,7 +143,7 @@ class SeminarPenjadwalanForm(forms.ModelForm):
             pembimbing_id = seminar.dosen_pembimbing_id
 
             if str(pembimbing_id) in (raw_d1, raw_d2):
-                errors.append("Dosen pembimibng tidak boleh menjadi dosen penguji.")
+                errors.append("Dosen pembimbing tidak boleh menjadi dosen penguji.")
 
         if not jadwal:
             errors.append("Jadwal seminar wajib diisi.")
