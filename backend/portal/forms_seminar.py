@@ -55,6 +55,17 @@ class SeminarAssessmentForm(forms.ModelForm):
         }
 
 
+class PembimbingAssessmentForm(SeminarAssessmentForm):
+    """Form penilaian PKL khusus untuk dosen pembimbing."""
+
+    class Meta(SeminarAssessmentForm.Meta):
+        labels = {
+            **SeminarAssessmentForm.Meta.labels,
+            "pemahaman_materi": "Pemahaman perkembangan mahasiswa selama PKL",
+            "kualitas_laporan": "Kualitas dokumen & kedisiplinan bimbingan",
+        }
+
+
 class SeminarHasilMahasiswaForm(forms.ModelForm):
     class Meta:
         model = SeminarHasilPKL
@@ -91,10 +102,9 @@ class SeminarPenjadwalanForm(forms.ModelForm):
 
     class Meta:
         model = SeminarHasilPKL
-        fields = ["dosen_penguji_1", "dosen_penguji_2", "jadwal", "ruang"]
+        fields = ["dosen_penguji", "jadwal", "ruang"]
         widgets = {
-            "dosen_penguji_1": forms.Select(attrs={"class": "form-select"}),
-            "dosen_penguji_2": forms.Select(attrs={"class": "form-select"}),
+            "dosen_penguji": forms.Select(attrs={"class": "form-select"}),
             "jadwal": forms.DateTimeInput(
                 attrs={"class": "form-control", "type": "datetime-local"}
             ),
@@ -105,45 +115,33 @@ class SeminarPenjadwalanForm(forms.ModelForm):
         seminar = kwargs.get("instance", None)
         super().__init__(*args, **kwargs)
 
-        # Kedua penguji wajib
-        self.fields["dosen_penguji_1"].required = True
-        self.fields["dosen_penguji_2"].required = True
+        self.fields["dosen_penguji"].required = True
 
         # Kalau sudah ada pembimbing → exclude dari pilihan penguji
         if seminar and seminar.dosen_pembimbing_id:
             qs = Dosen.objects.exclude(pk=seminar.dosen_pembimbing_id)
-            self.fields["dosen_penguji_1"].queryset = qs
-            self.fields["dosen_penguji_2"].queryset = qs
+            self.fields["dosen_penguji"].queryset = qs
 
     def clean(self):
         cleaned = super().clean()
-        raw_d1 = str(self.data.get("dosen_penguji_1") or "")
-        raw_d2 = str(self.data.get("dosen_penguji_2") or "")
+        raw_dosen = str(self.data.get("dosen_penguji") or "")
 
-        d1 = cleaned.get("dosen_penguji_1")
-        d2 = cleaned.get("dosen_penguji_2")
+        dosen_penguji = cleaned.get("dosen_penguji")
         jadwal = cleaned.get("jadwal")
         ruang = cleaned.get("ruang")
         seminar = self.instance
 
         errors: list[str] = []
 
-        # Wajib dua penguji
-        if not d1 or not d2:
-            errors.append("Dua dosen penguji wajib dipilih.")
-
-        # Tidak boleh sama
-        if d1 == d2:
-            errors.append(
-                "Dosen penguji 1 dan 2 tidak boleh orang yang sama."
-            )
+        if not dosen_penguji:
+            errors.append("Dosen penguji wajib dipilih.")
 
         # Tidak boleh dosen pembimbing
         if seminar and seminar.dosen_pembimbing_id:
             pembimbing_id = seminar.dosen_pembimbing_id
 
-            if str(pembimbing_id) in (raw_d1, raw_d2):
-                errors.append("Dosen pembimibng tidak boleh menjadi dosen penguji.")
+            if str(pembimbing_id) == raw_dosen:
+                errors.append("Dosen pembimbing tidak boleh menjadi dosen penguji.")
 
         if not jadwal:
             errors.append("Jadwal seminar wajib diisi.")

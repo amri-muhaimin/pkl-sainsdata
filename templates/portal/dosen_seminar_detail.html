@@ -16,8 +16,7 @@
                 Mahasiswa:
                 <strong>{{ seminar.mahasiswa.nim }} - {{ seminar.mahasiswa.nama }}</strong><br>
                 Dosen pembimbing: <strong>{{ seminar.dosen_pembimbing.nama }}</strong><br>
-                Penguji 1: <strong>{{ seminar.dosen_penguji_1.nama }}</strong> |
-                Penguji 2: <strong>{{ seminar.dosen_penguji_2.nama }}</strong>
+                Dosen penguji: <strong>{{ seminar.dosen_penguji.nama }}</strong>
             </p>
         </div>
         <div class="text-end">
@@ -25,10 +24,18 @@
                class="btn btn-outline-secondary btn-sm mb-1">
                 &larr; Dashboard Dosen
             </a>
-            <a href="{% url 'portal:dosen_seminar_penilaian' seminar.pk %}"
-                 class="btn btn-primary btn-sm mb-1">
-                 Isi / Ubah Penilaian
-            </a>
+            {% if seminar.dosen_penguji_id == dosen.id %}
+                <a href="{% url 'portal:dosen_seminar_penilaian' seminar.pk %}"
+                     class="btn btn-primary btn-sm mb-1">
+                     Isi / Ubah Penilaian Penguji
+                </a>
+            {% endif %}
+            {% if seminar.dosen_pembimbing_id == dosen.id %}
+                <a href="{% url 'portal:dosen_pembimbing_penilaian' seminar.pk %}"
+                     class="btn btn-success btn-sm mb-1">
+                    Penilaian Pembimbing
+                </a>
+            {% endif %}
             {% if final_score %}
                 <a href="{% url 'portal:seminar_penilaian_pdf' seminar.pk %}"
                     class="btn btn-outline-secondary btn-sm mb-1" target="_blank">
@@ -108,6 +115,28 @@
                     Belum ada penilaian yang tersimpan.
                     Silakan klik tombol <strong>Isi / Ubah Penilaian</strong>.
                 </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">Penilaian Dosen Pembimbing</div>
+        <div class="card-body">
+            {% if pembimbing_assessment %}
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Pembimbing:</strong> {{ pembimbing_assessment.penguji.nama }}</li>
+                    <li class="list-group-item"><strong>Pemahaman:</strong> {{ pembimbing_assessment.pemahaman_materi }}</li>
+                    <li class="list-group-item"><strong>Laporan:</strong> {{ pembimbing_assessment.kualitas_laporan }}</li>
+                    <li class="list-group-item"><strong>Presentasi:</strong> {{ pembimbing_assessment.presentasi }}</li>
+                    <li class="list-group-item"><strong>Penguasaan Lapangan:</strong> {{ pembimbing_assessment.penguasaan_lapangan }}</li>
+                    <li class="list-group-item"><strong>Sikap:</strong> {{ pembimbing_assessment.sikap_profesional }}</li>
+                    <li class="list-group-item"><strong>Nilai Angka:</strong> {{ pembimbing_assessment.nilai_angka }} ({{ pembimbing_assessment.nilai_huruf }})</li>
+                    {% if pembimbing_assessment.catatan %}
+                        <li class="list-group-item"><strong>Catatan:</strong> {{ pembimbing_assessment.catatan }}</li>
+                    {% endif %}
+                </ul>
+            {% else %}
+                <p class="mb-0 text-muted">Belum ada penilaian dari dosen pembimbing.</p>
             {% endif %}
         </div>
     </div>

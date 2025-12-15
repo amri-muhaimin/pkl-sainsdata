@@ -122,7 +122,7 @@ def dosen_seminar_list(request):
 
     seminars = (
         SeminarHasilPKL.objects
-        .filter(Q(dosen_penguji_1=dosen) | Q(dosen_penguji_2=dosen))
+        .filter(dosen_penguji=dosen)
         .select_related("mahasiswa", "dosen_pembimbing")
         .order_by("jadwal")   # sesuaikan dengan field jadwal di model
     )
@@ -148,18 +148,17 @@ def dosen_seminar_detail(request, pk: int):
     seminar = get_object_or_404(SeminarHasilPKL, pk=pk)
 
     # hanya pembimbing / penguji yang boleh lihat
-    if (
-        seminar.dosen_pembimbing != dosen
-        and seminar.dosen_penguji_1 != dosen
-        and seminar.dosen_penguji_2 != dosen
-    ):
+    if seminar.dosen_pembimbing != dosen and seminar.dosen_penguji != dosen:
         return HttpResponseForbidden("Anda tidak berhak mengakses seminar ini.")
 
     assessments = (
         SeminarAssessment.objects
-        .filter(seminar=seminar)
+        .filter(seminar=seminar, role="PENGUJI")
         .select_related("penguji")
     )
+    pembimbing_assessment = SeminarAssessment.objects.filter(
+        seminar=seminar, role="PEMBIMBING"
+    ).select_related("penguji").first()
 
     final_score = None
     final_grade = None
@@ -190,14 +189,15 @@ def dosen_seminar_penilaian(request, pk: int):
     dosen = request.user.dosen_profile
     seminar = get_object_or_404(SeminarHasilPKL, pk=pk)
 
-    # hanya penguji 1/2 yang boleh masuk
-    if seminar.dosen_penguji_1 != dosen and seminar.dosen_penguji_2 != dosen:
+    # hanya penguji yang boleh masuk
+    if seminar.dosen_penguji != dosen:
         return HttpResponseForbidden("Anda bukan dosen penguji pada seminar ini.")
 
     # cari penilaian yang sudah pernah dibuat oleh dosen ini (kalau ada)
     assessment = SeminarAssessment.objects.filter(
         seminar=seminar,
         penguji=dosen,
+        role="PENGUJI",
     ).first()
 
     if request.method == "POST":
@@ -206,6 +206,7 @@ def dosen_seminar_penilaian(request, pk: int):
             obj = form.save(commit=False)
             obj.seminar = seminar
             obj.penguji = dosen
+            obj.role = "PENGUJI"
             obj.save()  # di sini baru disimpan / dibuat
 
             messages.success(
@@ -238,16 +239,12 @@ def seminar_penilaian_pdf(request, pk: int):
     # batasi akses: dosen terkait saja
     if hasattr(request.user, "dosen_profile"):
         dosen = request.user.dosen_profile
-        if (
-            seminar.dosen_pembimbing != dosen
-            and seminar.dosen_penguji_1 != dosen
-            and seminar.dosen_penguji_2 != dosen
-        ):
+        if seminar.dosen_pembimbing != dosen and seminar.dosen_penguji != dosen:
             return HttpResponseForbidden("Anda tidak berhak mengakses dokumen ini.")
 
     assessments = (
         SeminarAssessment.objects
-        .filter(seminar=seminar)
+        .filter(seminar=seminar, role="PENGUJI")
         .select_related("penguji")
     )
 
@@ -263,6 +260,7 @@ def seminar_penilaian_pdf(request, pk: int):
         "assessments": assessments,
         "final_score": final_score,
         "final_grade": final_grade,
+        "pembimbing_assessment": pembimbing_assessment,
     }
     return render_to_pdf("portal/seminar_penilaian_pdf.html", context)
 
@@ -444,8 +442,7 @@ def koordinator_seminar_detail(request, pk: int):
             "mahasiswa__mitra",
             "periode",
             "dosen_pembimbing",
-            "dosen_penguji_1",
-            "dosen_penguji_2",
+            "dosen_penguji",
         ),
         pk=pk,
     )
@@ -454,8 +451,7 @@ def koordinator_seminar_detail(request, pk: int):
         form = SeminarPenjadwalanForm(request.POST, instance=seminar)
         if form.is_valid():
             cleaned = form.cleaned_data
-            d1 = cleaned["dosen_penguji_1"]
-            d2 = cleaned["dosen_penguji_2"]
+            d1 = cleaned["dosen_penguji"]
             jadwal = cleaned["jadwal"]
             ruang = cleaned["ruang"]
 
@@ -468,10 +464,8 @@ def koordinator_seminar_detail(request, pk: int):
             # --- Cek bentrok dosen penguji ---
             conflict_dosen = SeminarHasilPKL.objects.filter(
                 jadwal=jadwal,
-            ).exclude(pk=seminar.pk).filter(
-                Q(dosen_penguji_1__in=[d1, d2]) |
-                Q(dosen_penguji_2__in=[d1, d2])
-            ).exists()
+                dosen_penguji=d1,
+            ).exclude(pk=seminar.pk).exists()
 
             if conflict_ruang:
                 form.add_error(
@@ -493,7 +487,7 @@ def koordinator_seminar_detail(request, pk: int):
                 )
             else:
                 obj = form.save(commit=False)
-                # Jika jadwal & dua penguji terisi → DIJADWALKAN
+                # Jika jadwal & penguji terisi → DIJADWALKAN
                 obj.status = "DIJADWALKAN"
                 obj.save()
                 messages.success(request, "Penjadwalan seminar berhasil disimpan.")

@@ -18,6 +18,7 @@ from .forms_guidance import (
 )
 from .forms_pendaftaran import PendaftaranPKLMahasiswaForm
 from .forms_seminar import (
+    PembimbingAssessmentForm,
     SeminarAssessmentForm,
     SeminarHasilMahasiswaForm,
     SeminarPenjadwalanForm,
@@ -37,6 +38,7 @@ __all__ = [
     # pendaftaran PKL
     "PendaftaranPKLMahasiswaForm",
     # seminar
+    "PembimbingAssessmentForm",
     "SeminarAssessmentForm",
     "SeminarHasilMahasiswaForm",
     "SeminarPenjadwalanForm",

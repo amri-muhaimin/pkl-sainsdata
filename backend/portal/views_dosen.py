@@ -21,6 +21,7 @@ from .forms import (
     LogbookReviewForm,
     MahasiswaGuidanceForm,      # boleh tidak dipakai, tidak apa-apa
     DosenGuidanceValidationForm,
+    PembimbingAssessmentForm,
     SeminarAssessmentForm,
     SeminarPenjadwalanForm,
 )
@@ -353,9 +354,7 @@ def dosen_seminar_list(request):
 
     seminars = (
         SeminarHasilPKL.objects.filter(
-            Q(dosen_pembimbing=dosen)
-            | Q(dosen_penguji_1=dosen)
-            | Q(dosen_penguji_2=dosen)
+            Q(dosen_pembimbing=dosen) | Q(dosen_penguji=dosen)
         )
         .select_related("mahasiswa", "dosen_pembimbing", "periode")
         .order_by("jadwal", "mahasiswa__nim")
@@ -376,16 +375,15 @@ def dosen_seminar_detail(request, pk: int):
         pk=pk,
     )
 
-    if (
-        seminar.dosen_pembimbing != dosen
-        and seminar.dosen_penguji_1 != dosen
-        and seminar.dosen_penguji_2 != dosen
-    ):
+    if seminar.dosen_pembimbing != dosen and seminar.dosen_penguji != dosen:
         return HttpResponseForbidden("Anda tidak berhak mengakses seminar ini.")
 
-    assessments = SeminarAssessment.objects.filter(seminar=seminar).select_related(
-        "penguji"
-    )
+    assessments = SeminarAssessment.objects.filter(
+        seminar=seminar, role="PENGUJI"
+    ).select_related("penguji")
+    pembimbing_assessment = SeminarAssessment.objects.filter(
+        seminar=seminar, role="PEMBIMBING"
+    ).select_related("penguji").first()
 
     final_score = None
     final_grade = None
@@ -399,6 +397,7 @@ def dosen_seminar_detail(request, pk: int):
         "dosen": dosen,
         "seminar": seminar,
         "assessments": assessments,
+        "pembimbing_assessment": pembimbing_assessment,
         "final_score": final_score,
         "final_grade": final_grade,
     }
@@ -413,10 +412,12 @@ def dosen_seminar_penilaian(request, pk: int):
 
     seminar = get_object_or_404(SeminarHasilPKL, pk=pk)
 
-    if seminar.dosen_penguji_1 != dosen and seminar.dosen_penguji_2 != dosen:
+    if seminar.dosen_penguji != dosen:
         return HttpResponseForbidden("Anda bukan dosen penguji pada seminar ini.")
 
-    assessment = SeminarAssessment.objects.filter(seminar=seminar, penguji=dosen).first()
+    assessment = SeminarAssessment.objects.filter(
+        seminar=seminar, penguji=dosen, role="PENGUJI"
+    ).first()
 
     if request.method == "POST":
         form = SeminarAssessmentForm(request.POST, instance=assessment)
@@ -424,6 +425,7 @@ def dosen_seminar_penilaian(request, pk: int):
             obj = form.save(commit=False)
             obj.seminar = seminar
             obj.penguji = dosen
+            obj.role = "PENGUJI"
             obj.save()
             messages.success(
                 request,
@@ -444,6 +446,47 @@ def dosen_seminar_penilaian(request, pk: int):
 
 
 @login_required
+def dosen_pembimbing_penilaian(request, pk: int):
+    dosen, error = _require_dosen(request)
+    if error:
+        return error
+
+    seminar = get_object_or_404(SeminarHasilPKL, pk=pk)
+
+    if seminar.dosen_pembimbing != dosen:
+        return HttpResponseForbidden("Anda bukan dosen pembimbing pada seminar ini.")
+
+    assessment = SeminarAssessment.objects.filter(
+        seminar=seminar, penguji=dosen, role="PEMBIMBING"
+    ).first()
+
+    if request.method == "POST":
+        form = PembimbingAssessmentForm(request.POST, instance=assessment)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.seminar = seminar
+            obj.penguji = dosen
+            obj.role = "PEMBIMBING"
+            obj.save()
+            messages.success(
+                request,
+                f"Penilaian pembimbing untuk {seminar.mahasiswa.nama} berhasil disimpan.",
+            )
+            return redirect("portal:dosen_seminar_detail", pk=seminar.pk)
+        messages.error(request, "Silakan periksa kembali nilai yang diinput.")
+    else:
+        form = PembimbingAssessmentForm(instance=assessment)
+
+    context = {
+        "dosen": dosen,
+        "seminar": seminar,
+        "assessment": assessment,
+        "form": form,
+    }
+    return render(request, "portal/dosen_pembimbing_penilaian.html", context)
+
+
+@login_required
 def seminar_penilaian_pdf(request, pk: int):
     dosen, error = _require_dosen(request)
     if error:
@@ -454,18 +497,21 @@ def seminar_penilaian_pdf(request, pk: int):
         pk=pk,
     )
 
-    if (
-        seminar.dosen_pembimbing != dosen
-        and seminar.dosen_penguji_1 != dosen
-        and seminar.dosen_penguji_2 != dosen
-    ):
+    if seminar.dosen_pembimbing != dosen and seminar.dosen_penguji != dosen:
         return HttpResponseForbidden("Anda tidak berhak mengakses seminar ini.")
 
-    assessments = SeminarAssessment.objects.filter(seminar=seminar).select_related(
-        "penguji"
-    )
+    assessments = SeminarAssessment.objects.filter(
+        seminar=seminar, role="PENGUJI"
+    ).select_related("penguji")
+    pembimbing_assessment = SeminarAssessment.objects.filter(
+        seminar=seminar, role="PEMBIMBING"
+    ).select_related("penguji").first()
 
-    context = {"seminar": seminar, "assessments": assessments}
+    context = {
+        "seminar": seminar,
+        "assessments": assessments,
+        "pembimbing_assessment": pembimbing_assessment,
+    }
     pdf_bytes = render_to_pdf("portal/seminar_penilaian_pdf.html", context)
     return HttpResponse(pdf_bytes, content_type="application/pdf")
 
