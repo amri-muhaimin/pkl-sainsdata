@@ -273,7 +273,7 @@ def mahasiswa_pendaftaran_pkl(request):
             # kalau belum ada pembimbing di pendaftaran, ambil dari profil mahasiswa (jika ada)
             if obj.dosen_pembimbing is None:
                 obj.dosen_pembimbing = mhs.dosen_pembimbing
-
+                
             obj.save()
             messages.success(request, "Pendaftaran PKL berhasil dikirim.")
             return redirect("portal:mahasiswa_pendaftaran_pkl")
