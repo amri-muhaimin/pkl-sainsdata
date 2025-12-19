@@ -20,6 +20,8 @@ from .views_dosen import (
     koordinator_seminar_list,
     koordinator_seminar_detail,
     koordinator_dosen_kuota,
+    koor_as_dosen_dashboard,
+    dosen_as_koordinator_dashboard,
 )
 from .views_mahasiswa import (
     mahasiswa_dashboard,
@@ -57,6 +59,8 @@ __all__ = [
     "koordinator_seminar_list",
     "koordinator_seminar_detail",
     "koordinator_dosen_kuota",
+    "koor_as_dosen_dashboard",
+    "dosen_as_koordinator_dashboard"
     # Mahasiswa
     "mahasiswa_dashboard",
     "mahasiswa_logbook_add",

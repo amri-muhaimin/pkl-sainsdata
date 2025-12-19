@@ -4,7 +4,6 @@ from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from django.urls import path
 from . import views
-
 app_name = "portal"
 
 urlpatterns = [
@@ -116,6 +115,15 @@ urlpatterns = [
         "koor/dosen/kuota/",
         views.koordinator_dosen_kuota,
         name="koordinator_dosen_kuota",
+    ),
+    path(
+        "koor/as-dosen/",
+        views.koor_as_dosen_dashboard,
+        name="koor_as_dosen_dashboard",
+    ),
+    path("dosen/as-koor/",
+         views.dosen_as_koordinator_dashboard,
+         name="dosen_as_koordinator_dashboard"
     ),
 
 

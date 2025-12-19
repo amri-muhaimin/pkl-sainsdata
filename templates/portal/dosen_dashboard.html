@@ -14,6 +14,14 @@
   </div>
 </div>
 
+{% if user.dosen_profile and user.dosen_profile.is_koordinator_pkl %}
+  <a href="/koor/dashboard/" class="btn btn-warning btn-sm mb-3">
+    Kembali ke Dashboard Koordinator
+  </a>
+{% endif %}
+
+
+
 <!-- Ringkasan utama -->
 <div class="row g-3 mb-4">
   <!-- Total mahasiswa bimbingan -->

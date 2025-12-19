@@ -119,6 +119,22 @@ def dosen_dashboard(request):
     }
     return render(request, "portal/dosen_dashboard.html", context)
 
+@login_required
+def koor_as_dosen_dashboard(request):
+    dosen_login = getattr(request.user, "dosen_profile", None)
+    if not dosen_login or not dosen_login.is_koordinator_pkl:
+        return HttpResponseForbidden("Bukan koordinator PKL.")
+    # langsung delegasi ke dashboard dosen
+    return dosen_dashboard(request)
+
+@login_required
+def dosen_as_koordinator_dashboard(request):
+    dosen_login = getattr(request.user, "dosen_profile", None)
+    if not dosen_login:
+        return HttpResponseForbidden("Akun ini bukan dosen.")
+    if not dosen_login.is_koordinator_pkl:
+        return HttpResponseForbidden("Dosen ini bukan koordinator PKL.")
+    return redirect("portal:koordinator_dashboard")
 
 @login_required
 def dosen_mahasiswa_detail(request, mahasiswa_id: int):
@@ -565,6 +581,35 @@ def koordinator_dashboard(request):
         "recent_pendaftaran": recent_pendaftaran,
         "recent_seminar": recent_seminar,
     }
+    dosen_login = getattr(request.user, "dosen_profile", None)
+    if not dosen_login or not dosen_login.is_koordinator_pkl:
+        return HttpResponseForbidden("Bukan Koordinator Dosen PKL.")
+    
+    pembimbing = dosen_login
+    mhs_bimbingan = (
+        Mahasiswa.objects
+        .filter(dosen_pembimbing = pembimbing)
+        .select_related("periode", "mitra")
+    )
+    seminar_dibimbing = (
+        SeminarHasilPKL.objects
+        .filter(dosen_pembimbing=pembimbing)
+        .select_related("mahasiswa", "periode")
+        .order_by("-created_at")
+    )
+    nilai_pembimbing = SeminarAssessment.objects.filter(
+        penguji=pembimbing, role="PEMBIMBING"
+    )
+
+    context.update({
+        "as_pembimbing": {
+            "jumlah_mhs_bimbingan": mhs_bimbingan.count(),
+            "mhs_bimbingan": mhs_bimbingan[:10],
+            "jumlah_seminar_dibimbing": seminar_dibimbing.count(),
+            "seminar_dibimbing": seminar_dibimbing[:10],
+            "jumlah_penilaian_pembimbing": nilai_pembimbing.count(),
+        }
+    })
     return render(request, "portal/koordinator_dashboard.html", context)
 
 
@@ -634,21 +679,48 @@ def koordinator_pendaftaran_detail(request, pk: int):
 
 
 @login_required
+@login_required
 def koordinator_pemetaan(request):
     koor, error = _require_koordinator(request)
     if error:
         return error
 
+    # Ringkasan dosen + jumlah mahasiswa bimbingan (berdasarkan pendaftaran disetujui)
     dosen_list = (
-        Dosen.objects.all()
+        Dosen.objects.order_by("nama")
         .annotate(
-            jumlah_bimbingan=Count("mahasiswa_bimbingan"),
-            jumlah_pendaftaran=Count("pendaftaran_pkl"),
+            mahasiswa_saat_ini=Count(
+                "pendaftaran_pkl",  # sesuaikan related_name FK PendaftaranPKL->Dosen
+                filter=(
+                    Q(pendaftaran_pkl__status="DISETUJUI")
+                ),
+                distinct=True,
+            )
         )
-        .order_by("nama")
     )
 
-    context = {"koordinator": koor, "dosen_list": dosen_list}
+    # Data mahasiswa menunggu pemetaan (disetujui tapi belum ada pembimbing)
+    pendaftaran_tanpa_pembimbing = (
+        PendaftaranPKL.objects.filter(status="DISETUJUI", dosen_pembimbing__isnull=True)
+        .select_related("mahasiswa", "mitra", "periode")
+        .order_by("-tanggal_pengajuan")
+    )
+
+    # Data mahasiswa sudah punya pembimbing (disetujui + pembimbing terisi)
+    pendaftaran_sudah_pembimbing = (
+        PendaftaranPKL.objects.filter(status="DISETUJUI", dosen_pembimbing__isnull=False)
+        .select_related("mahasiswa", "mitra", "periode", "dosen_pembimbing")
+        .order_by("-tanggal_pengajuan")
+    )
+
+    context = {
+        "koordinator": koor,
+        "dosen_list": dosen_list,
+        "pendaftaran_tanpa_pembimbing": pendaftaran_tanpa_pembimbing,
+        "pendaftaran_sudah_pembimbing": pendaftaran_sudah_pembimbing,
+        "jumlah_tanpa_pembimbing": pendaftaran_tanpa_pembimbing.count(),
+        "jumlah_sudah_pembimbing": pendaftaran_sudah_pembimbing.count(),
+    }
     return render(request, "portal/koordinator_pemetaan.html", context)
 
 

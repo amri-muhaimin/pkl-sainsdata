@@ -67,13 +67,16 @@
         </div>
     </div>
 
-    <!-- Mahasiswa yang belum punya pembimbing -->
+    <!-- Mahasiswa yang belum punya pembimbing (berdasarkan PendaftaranPKL DISETUJUI) -->
     <div class="card mb-4">
         <div class="card-header">
-            <strong>Mahasiswa tanpa Dosen Pembimbing</strong>
+            <h5 class="mb-0">
+                <strong>Mahasiswa tanpa Dosen Pembimbing</strong>
+                ({{ jumlah_tanpa_pembimbing }})
+            </h5>
         </div>
         <div class="card-body p-0">
-            {% if mahasiswa_unassigned %}
+            {% if pendaftaran_tanpa_pembimbing %}
                 <div class="table-responsive">
                     <table class="table table-striped table-hover mb-0">
                         <thead>
@@ -83,20 +86,19 @@
                             <th>Mitra</th>
                             <th>Periode</th>
                             <th>Pilih Dosen Pembimbing</th>
-                            <th></th>
                         </tr>
                         </thead>
                         <tbody>
-                        {% for m in mahasiswa_unassigned %}
+                        {% for p in pendaftaran_tanpa_pembimbing %}
                             <tr>
-                                <td>{{ m.nim }}</td>
-                                <td>{{ m.nama }}</td>
-                                <td>{{ m.mitra.nama|default:"-" }}</td>
-                                <td>{{ m.periode.nama_periode|default:"-" }}</td>
+                                <td>{{ p.mahasiswa.nim }}</td>
+                                <td>{{ p.mahasiswa.nama }}</td>
+                                <td>{{ p.mitra.nama|default:"-" }}</td>
+                                <td>{{ p.periode.nama_periode|default:"-" }}</td>
                                 <td>
                                     <form method="post" class="d-flex gap-2 align-items-center">
                                         {% csrf_token %}
-                                        <input type="hidden" name="mahasiswa_id" value="{{ m.id }}">
+                                        <input type="hidden" name="pendaftaran_id" value="{{ p.id }}">
                                         <select name="dosen_id" class="form-select form-select-sm" required>
                                             <option value="">-- Pilih Dosen --</option>
                                             {% for d in dosen_list %}
@@ -110,7 +112,6 @@
                                         </button>
                                     </form>
                                 </td>
-                                <td></td>
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -125,13 +126,16 @@
         </div>
     </div>
 
-    <!-- Mahasiswa yang sudah punya pembimbing (optional, read-only) -->
+    <!-- Mahasiswa yang sudah punya pembimbing (berdasarkan PendaftaranPKL DISETUJUI) -->
     <div class="card mb-4">
         <div class="card-header">
-            <strong>Mahasiswa yang sudah memiliki Dosen Pembimbing</strong>
+            <h5 class="mb-0">
+                <strong>Mahasiswa yang sudah memiliki Dosen Pembimbing</strong>
+                ({{ jumlah_sudah_pembimbing }})
+            </h5>
         </div>
         <div class="card-body p-0">
-            {% if mahasiswa_assigned %}
+            {% if pendaftaran_sudah_pembimbing %}
                 <div class="table-responsive">
                     <table class="table table-striped table-hover mb-0">
                         <thead>
@@ -144,13 +148,13 @@
                         </tr>
                         </thead>
                         <tbody>
-                        {% for m in mahasiswa_assigned %}
+                        {% for p in pendaftaran_sudah_pembimbing %}
                             <tr>
-                                <td>{{ m.nim }}</td>
-                                <td>{{ m.nama }}</td>
-                                <td>{{ m.mitra.nama|default:"-" }}</td>
-                                <td>{{ m.periode.nama_periode|default:"-" }}</td>
-                                <td>{{ m.dosen_pembimbing.nama }}</td>
+                                <td>{{ p.mahasiswa.nim }}</td>
+                                <td>{{ p.mahasiswa.nama }}</td>
+                                <td>{{ p.mitra.nama|default:"-" }}</td>
+                                <td>{{ p.periode.nama_periode|default:"-" }}</td>
+                                <td>{{ p.dosen_pembimbing.nama }}</td>
                             </tr>
                         {% endfor %}
                         </tbody>

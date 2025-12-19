@@ -138,7 +138,6 @@
                         <label class="form-label">Periode PKL</label>
                         {{ form.periode }}
                     </div>
-
                     <!-- Mitra yang sudah ada di sistem -->
                     <div class="mb-3">
                         <label class="form-label">Mitra/Perusahaan (tersedia di sistem)</label>
@@ -163,6 +162,23 @@
                         <label class="form-label">{{ form.mitra_baru_alamat.label }}</label>
                         {{ form.mitra_baru_alamat }}
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.tanggal_mulai_pkl.label }}</label>
+                        {{ form.tanggal_mulai_pkl }}
+                        {% if form.tanggal_mulai_pkl.errors %}
+                            <div class="text-danger small">{{ form.tanggal_mulai_pkl.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.tanggal_selesai_pkl.label }}</label>
+                        {{ form.tanggal_selesai_pkl }}
+                        {% if form.tanggal_selesai_pkl.errors %}
+                            <div class="text-danger small">{{ form.tanggal_selesai_pkl.errors }}</div>
+                        {% endif %}
+                    </div>
+
 
                     <div class="mb-3">
                         <label class="form-label">Jenis PKL</label>

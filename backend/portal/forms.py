@@ -36,7 +36,7 @@ __all__ = [
     "MahasiswaGuidanceForm",
     "DosenGuidanceValidationForm",
     # pendaftaran PKL
-    "PendaftaranPKLMahasiswaForm",
+    "PendaftaranPKLMahasiswaForm"
     # seminar
     "PembimbingAssessmentForm",
     "SeminarAssessmentForm",

@@ -231,13 +231,17 @@ class PendaftaranPKL(models.Model):
     mitra = models.ForeignKey(
         "Mitra",
         on_delete=models.PROTECT,
-        related_name="pendaftaran_pkl",
+        related_name="pendaftaran_pkl_list",
         help_text="Perusahaan/mitra tempat PKL",
     )
     jenis_pkl = models.CharField(
         max_length=10,
         choices=JENIS_PKL_CHOICES,
     )
+
+    tanggal_mulai_pkl = models.DateField(null=True, blank=True)
+    tanggal_selesai_pkl = models.DateField(null=True, blank=True)
+
     anggota_kelompok = models.TextField(
         blank=True,
         help_text="Jika PKL kelompok, tuliskan NIM dan nama anggota lain.",
@@ -266,6 +270,8 @@ class PendaftaranPKL(models.Model):
     )
     tanggal_pengajuan = models.DateTimeField(auto_now_add=True)
     tanggal_update = models.DateTimeField(auto_now=True)
+
+    
 
     class Meta:
         verbose_name = "Pendaftaran PKL"

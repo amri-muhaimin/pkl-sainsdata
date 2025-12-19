@@ -5,9 +5,11 @@ from django.contrib import messages
 from django.utils import timezone
 import csv
 
+
+from masterdata.models import PendaftaranPKL, PeriodePKL, SeminarHasilPKL
+
 from logbook.models import LogbookEntry
 from guidance.models import GuidanceSession
-from masterdata.models import PendaftaranPKL, SeminarHasilPKL, Mitra
 from .forms import (
     MahasiswaLogbookForm,
     PendaftaranPKLMahasiswaForm,
@@ -241,53 +243,48 @@ def mahasiswa_pendaftaran_pkl(request):
         .first()
     )
 
-    eligible = mhs.periode is not None
+    # cek periode aktif dari tabel PeriodePKL, bukan dari mhs.periode
+    today = timezone.localdate()
+    periode_aktif = (
+        PeriodePKL.objects
+        .filter(aktif=True)   # jika ingin pakai rentang tanggal, lihat catatan di bawah
+        .order_by("-tanggal_mulai")
+        .first()
+    )
+    eligible = periode_aktif is not None
+
     is_locked = pendaftaran is not None and pendaftaran.status != "DIKIRIM"
 
     if request.method == "POST":
         if not eligible:
-            messages.error(
-                request,
-                "Anda belum memiliki periode PKL yang aktif.",
-            )
+            messages.error(request, "Belum ada periode PKL yang aktif saat ini.")
             return redirect("portal:mahasiswa_pendaftaran_pkl")
 
         if is_locked:
-            messages.error(
-                request,
-                "Pendaftaran sudah diproses sehingga tidak dapat diubah lagi.",
-            )
+            messages.error(request, "Pendaftaran sudah diproses sehingga tidak dapat diubah lagi.")
             return redirect("portal:mahasiswa_pendaftaran_pkl")
 
-        form = PendaftaranPKLMahasiswaForm(
-            request.POST, request.FILES, instance=pendaftaran
-        )
+        form = PendaftaranPKLMahasiswaForm(request.POST, request.FILES, instance=pendaftaran)
         if form.is_valid():
             obj = form.save(commit=False)
             obj.mahasiswa = mhs
-
-            mitra = form.cleaned_data.get("mitra")
-            mitra_baru_nama = form.cleaned_data.get("mitra_baru_nama")
-            mitra_baru_alamat = form.cleaned_data.get("mitra_baru_alamat")
-
-            if not mitra and mitra_baru_nama:
-                mitra = Mitra.objects.create(
-                    nama=mitra_baru_nama,
-                    alamat=mitra_baru_alamat or "",
-                )
-
-            obj.mitra = mitra
             obj.status = "DIKIRIM"
 
+            # kalau belum ada pembimbing di pendaftaran, ambil dari profil mahasiswa (jika ada)
             if obj.dosen_pembimbing is None:
                 obj.dosen_pembimbing = mhs.dosen_pembimbing
 
             obj.save()
             messages.success(request, "Pendaftaran PKL berhasil dikirim.")
             return redirect("portal:mahasiswa_pendaftaran_pkl")
+
         messages.error(request, "Silakan periksa kembali isian pendaftaran.")
     else:
-        form = PendaftaranPKLMahasiswaForm(instance=pendaftaran)
+        # prefill periode aktif ketika pertama kali daftar (pendaftaran belum ada)
+        if pendaftaran is None and periode_aktif is not None:
+            form = PendaftaranPKLMahasiswaForm(initial={"periode": periode_aktif})
+        else:
+            form = PendaftaranPKLMahasiswaForm(instance=pendaftaran)
 
     context = {
         "mahasiswa": mhs,
@@ -297,7 +294,6 @@ def mahasiswa_pendaftaran_pkl(request):
         "is_locked": is_locked,
     }
     return render(request, "portal/mahasiswa_pendaftaran_pkl.html", context)
-
 
 # =========================
 # Pendaftaran Seminar Hasil PKL

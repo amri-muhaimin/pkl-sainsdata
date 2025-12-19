@@ -65,25 +65,36 @@
 
     {% if pendaftaran.status == "DIKIRIM" %}
         <div class="card">
-            <div class="card-header">
-                <strong>Verifikasi Pendaftaran</strong>
-            </div>
+            <div class="card-header">Verifikasi Pendaftaran</div>
             <div class="card-body">
-                <p class="mb-3">
-                    Silakan pilih tindakan untuk pendaftaran ini.
-                </p>
                 <form method="post">
                     {% csrf_token %}
-                    <div class="d-flex gap-2">
-                        <button type="submit" name="action" value="setujui"
-                                class="btn btn-success">
-                            Setujui
-                        </button>
-                        <button type="submit" name="action" value="tolak"
-                                class="btn btn-danger">
-                            Tolak
-                        </button>
+
+                    <div class="mb-3">
+                        <label class="form-label">Dosen Pembimbing</label>
+                        <select name="dosen_pembimbing" class="form-select">
+                        <option value="">-- pilih dosen --</option>
+                        {% for d in dosen_list %}
+                            <option value="{{ d.id }}"
+                            {% if pendaftaran.dosen_pembimbing and pendaftaran.dosen_pembimbing.id == d.id %}selected{% endif %}>
+                            {{ d.nama }}
+                            </option>
+                        {% endfor %}
+                        </select>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Catatan Koordinator</label>
+                        <textarea name="catatan_koordinator" class="form-control" rows="3">{{ pendaftaran.catatan_koordinator }}</textarea>
+                    </div>
+
+                    <button type="submit" name="status" value="DISETUJUI" class="btn btn-success">
+                        Setujui
+                    </button>
+
+                    <button type="submit" name="status" value="DITOLAK" class="btn btn-danger">
+                        Tolak
+                    </button>
                 </form>
             </div>
         </div>
