@@ -1,0 +1,33 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+  <h1>{{ title }}</h1>
+
+  {% if dry_run %}
+    <p><b>Mode:</b> Preview / Dry-run (tidak menyimpan)</p>
+  {% else %}
+    <p><b>Mode:</b> Import (menyimpan)</p>
+  {% endif %}
+
+  <p>
+    <b>Create-only:</b> {{ create_only|yesno:"Ya,Tidak" }}<br/>
+    <b>Reset password:</b> {{ reset_password|yesno:"Ya,Tidak" }}
+  </p>
+
+  <div style="margin: 12px 0;">
+    <div>Created: <b>{{ created }}</b></div>
+    <div>Updated: <b>{{ updated }}</b></div>
+    <div>Skipped: <b>{{ skipped }}</b></div>
+    <div>Failed: <b>{{ failed }}</b></div>
+  </div>
+
+  {% if errors %}
+    <h2>Error</h2>
+    <ul>
+      {% for e in errors %}
+        <li style="font-size: 13px;">{{ e }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <a href=".." class="button">Kembali ke daftar Mahasiswa</a>
+{% endblock %}

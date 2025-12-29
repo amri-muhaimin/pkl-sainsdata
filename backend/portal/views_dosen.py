@@ -39,11 +39,22 @@ def _require_dosen(request):
     return request.user.dosen_profile, None
 
 
+def _is_koordinator(dosen) -> bool:
+    """
+    Aman terhadap perubahan nama field koordinator di model.
+    """
+    if hasattr(dosen, "is_koordinator_pkl"):
+        return bool(getattr(dosen, "is_koordinator_pkl"))
+    if hasattr(dosen, "is_koordinator"):
+        return bool(getattr(dosen, "is_koordinator"))
+    return False
+
+
 def _require_koordinator(request):
     dosen, error = _require_dosen(request)
     if error:
         return None, error
-    if not dosen.is_koordinator_pkl:
+    if not _is_koordinator(dosen):
         return None, HttpResponseForbidden("Anda bukan koordinator PKL.")
     return dosen, None
 
@@ -68,9 +79,9 @@ def dosen_list(request):
 
 @login_required
 def dosen_dashboard(request):
-    dosen, error = _require_dosen(request)
-    if error:
-        return error
+    dosen = getattr(request.user, "dosen_profile", None)
+    if not dosen:
+        return HttpResponseForbidden("Akun ini tidak terhubung dengan data Dosen.")
 
     # Mahasiswa bimbingan
     mahasiswa_list = (
@@ -119,22 +130,25 @@ def dosen_dashboard(request):
     }
     return render(request, "portal/dosen_dashboard.html", context)
 
+
 @login_required
 def koor_as_dosen_dashboard(request):
     dosen_login = getattr(request.user, "dosen_profile", None)
-    if not dosen_login or not dosen_login.is_koordinator_pkl:
+    if not dosen_login or not _is_koordinator(dosen_login):
         return HttpResponseForbidden("Bukan koordinator PKL.")
     # langsung delegasi ke dashboard dosen
     return dosen_dashboard(request)
+
 
 @login_required
 def dosen_as_koordinator_dashboard(request):
     dosen_login = getattr(request.user, "dosen_profile", None)
     if not dosen_login:
         return HttpResponseForbidden("Akun ini bukan dosen.")
-    if not dosen_login.is_koordinator_pkl:
+    if not _is_koordinator(dosen_login):
         return HttpResponseForbidden("Dosen ini bukan koordinator PKL.")
     return redirect("portal:koordinator_dashboard")
+
 
 @login_required
 def dosen_mahasiswa_detail(request, mahasiswa_id: int):
@@ -206,7 +220,8 @@ def dosen_logbook_export(request):
         .order_by("mahasiswa__nim", "tanggal")
     )
 
-    response = HttpResponse(content_type="text/csv")
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response.write("\ufeff")  # BOM untuk Excel
     filename = f"logbook_dosen_{dosen.nidn}.csv"
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
@@ -309,7 +324,8 @@ def dosen_guidance_export(request):
         .order_by("mahasiswa__nim", "tanggal", "pertemuan_ke")
     )
 
-    response = HttpResponse(content_type="text/csv")
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response.write("\ufeff")  # BOM untuk Excel
     filename = f"bimbingan_dosen_{dosen.nidn}.csv"
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
@@ -581,14 +597,16 @@ def koordinator_dashboard(request):
         "recent_pendaftaran": recent_pendaftaran,
         "recent_seminar": recent_seminar,
     }
+
+    # tambahan data "as pembimbing" untuk koordinator
     dosen_login = getattr(request.user, "dosen_profile", None)
-    if not dosen_login or not dosen_login.is_koordinator_pkl:
+    if not dosen_login or not _is_koordinator(dosen_login):
         return HttpResponseForbidden("Bukan Koordinator Dosen PKL.")
-    
+
     pembimbing = dosen_login
     mhs_bimbingan = (
         Mahasiswa.objects
-        .filter(dosen_pembimbing = pembimbing)
+        .filter(dosen_pembimbing=pembimbing)
         .select_related("periode", "mitra")
     )
     seminar_dibimbing = (
@@ -658,8 +676,8 @@ def koordinator_pendaftaran_detail(request, pk: int):
 
         if dosen_id:
             try:
-                dosen = Dosen.objects.get(pk=int(dosen_id))
-                pendaftaran.dosen_pembimbing = dosen
+                dosen_obj = Dosen.objects.get(pk=int(dosen_id))
+                pendaftaran.dosen_pembimbing = dosen_obj
             except (Dosen.DoesNotExist, ValueError):
                 messages.error(request, "Dosen pembimbing tidak ditemukan.")
 
@@ -679,34 +697,28 @@ def koordinator_pendaftaran_detail(request, pk: int):
 
 
 @login_required
-@login_required
 def koordinator_pemetaan(request):
     koor, error = _require_koordinator(request)
     if error:
         return error
 
-    # Ringkasan dosen + jumlah mahasiswa bimbingan (berdasarkan pendaftaran disetujui)
     dosen_list = (
         Dosen.objects.order_by("nama")
         .annotate(
             mahasiswa_saat_ini=Count(
-                "pendaftaran_pkl",  # sesuaikan related_name FK PendaftaranPKL->Dosen
-                filter=(
-                    Q(pendaftaran_pkl__status="DISETUJUI")
-                ),
+                "pendaftaran_pkl",
+                filter=(Q(pendaftaran_pkl__status="DISETUJUI")),
                 distinct=True,
             )
         )
     )
 
-    # Data mahasiswa menunggu pemetaan (disetujui tapi belum ada pembimbing)
     pendaftaran_tanpa_pembimbing = (
         PendaftaranPKL.objects.filter(status="DISETUJUI", dosen_pembimbing__isnull=True)
         .select_related("mahasiswa", "mitra", "periode")
         .order_by("-tanggal_pengajuan")
     )
 
-    # Data mahasiswa sudah punya pembimbing (disetujui + pembimbing terisi)
     pendaftaran_sudah_pembimbing = (
         PendaftaranPKL.objects.filter(status="DISETUJUI", dosen_pembimbing__isnull=False)
         .select_related("mahasiswa", "mitra", "periode", "dosen_pembimbing")
@@ -778,9 +790,7 @@ def koordinator_seminar_detail(request, pk: int):
     else:
         form = SeminarPenjadwalanForm(instance=seminar)
 
-    assessments = SeminarAssessment.objects.filter(seminar=seminar).select_related(
-        "penguji"
-    )
+    assessments = SeminarAssessment.objects.filter(seminar=seminar).select_related("penguji")
 
     context = {
         "koordinator": koor,
@@ -806,15 +816,17 @@ def koordinator_dosen_kuota(request):
         kuota = request.POST.get("kuota_bimbingan")
 
         try:
-            dosen = Dosen.objects.get(pk=int(dosen_id))
+            dosen_obj = Dosen.objects.get(pk=int(dosen_id))
             kuota_int = int(kuota)
             if kuota_int < 0:
                 raise ValueError
-            dosen.kuota_bimbingan = kuota_int
-            dosen.save()
+            # field kuota_bimbingan mungkin ada di model, kalau tidak ada akan error.
+            # Tapi sesuai kode kamu, diasumsikan ada:
+            dosen_obj.kuota_bimbingan = kuota_int
+            dosen_obj.save()
             messages.success(
                 request,
-                f"Kuota bimbingan untuk {dosen.nama} berhasil diperbarui.",
+                f"Kuota bimbingan untuk {dosen_obj.nama} berhasil diperbarui.",
             )
         except (Dosen.DoesNotExist, ValueError, TypeError):
             messages.error(

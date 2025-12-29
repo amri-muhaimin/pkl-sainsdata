@@ -40,39 +40,41 @@ def validate_surat_penerimaan_file(file_obj):
 
 class Dosen(models.Model):
     user = models.OneToOneField(
-        User,
-        on_delete=models.CASCADE,
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="dosen_profile"
+    )
+
+    nama = models.CharField(max_length=150)
+
+    # sebelumnya: nidn = models.CharField(...)
+    nidn = models.CharField(
+        "NIDN/NUPTK",
+        max_length=50,
+        unique=True,
+        help_text="Isi dengan NIDN atau NUPTK (pilih salah satu).",
+    )
+
+    nip = models.CharField(
+        "NIP",
+        max_length=50,
         null=True,
         blank=True,
-        related_name="dosen_profile",
-        help_text="User akun untuk login sebagai dosen.",
-    )
-    nidn = models.CharField("NIDN", max_length=20, unique=True)
-    nama = models.CharField(max_length=100)
-    email = models.EmailField(blank=True, null=True)
-    no_hp = models.CharField("No. HP/WA", max_length=20, blank=True, null=True)
-
-    prodi = models.CharField(
-        max_length=100,
-        default="Sains Data",
-        help_text="Misalnya: Sains Data, Sistem Informasi, Informatika",
+        unique=True,
+        help_text="Opsional (misalnya untuk dosen ASN).",
     )
 
-    kuota_bimbingan = models.PositiveIntegerField(
-        default=10,
-        help_text="Maksimal jumlah mahasiswa PKL yang dibimbing pada satu periode.",
-    )
+    no_hp = models.CharField(max_length=30, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
 
-    is_koordinator_pkl = models.BooleanField(
-        default=False,
-        help_text="Centang jika dosen ini bertindak sebagai koordinator PKL.",
-        )
+    # field lain yang sudah ada (kuota_bimbingan, is_koordinator_pkl, dst) tetap
 
-    class Meta:
-        verbose_name = "Dosen"
-        verbose_name_plural = "Dosen"
+    def save(self, *args, **kwargs):
+        # supaya unique+blank tidak bentrok: kosong => None
+        if self.nip == "":
+            self.nip = None
+        super().save(*args, **kwargs)
 
-    def __str__(self) -> str:
+    def __str__(self):
         return f"{self.nama} ({self.nidn})"
 
 

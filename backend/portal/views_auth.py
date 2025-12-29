@@ -13,18 +13,25 @@ def portal_logout(request):
 def after_login(request):
     user = request.user
 
-    # Jika akun dosen
+    # kalau user dosen
     if hasattr(user, "dosen_profile"):
         dosen = user.dosen_profile
-        if dosen.is_koordinator_pkl:
+
+        # aman: support beberapa nama field
+        is_koor = (
+            getattr(dosen, "is_koordinator_pkl", None)
+            if getattr(dosen, "is_koordinator_pkl", None) is not None
+            else getattr(dosen, "is_koordinator", False)
+        )
+
+        if is_koor:
             return redirect("portal:koordinator_dashboard")
         return redirect("portal:dosen_dashboard")
 
-    # Jika akun mahasiswa
+    # kalau user mahasiswa
     if hasattr(user, "mahasiswa_profile"):
         return redirect("portal:mahasiswa_dashboard")
 
-    # Jika bukan keduanya
-    return HttpResponseForbidden(
-        "Akun ini belum dihubungkan ke data Dosen atau Mahasiswa."
-    )
+    # fallback
+    return redirect("portal:login")
+

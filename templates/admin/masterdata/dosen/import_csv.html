@@ -1,0 +1,13 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+  <h1>{{ title }}</h1>
+  <p>Kolom minimal (header): <b>{{ help_columns }}</b></p>
+  <p>Delimiter boleh <b>,</b> atau <b>;</b>. Encoding disarankan <b>UTF-8</b>.</p>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Import" class="default">
+    <a href=".." class="button cancel-link">Batal</a>
+  </form>
+{% endblock %}
