@@ -26,3 +26,13 @@ class ValidatorSuratPenerimaanTests(TestCase):
         with self.assertRaises(ValidationError):
             validate_surat_penerimaan_file(file_obj)
             
+    def test_menerima_pdf_ukuran_kecil(self):
+        small_content = b"%PDF-1.4\n%test\n" + (b"x" * 2048)
+        file_obj = SimpleUploadedFile(
+            "surat.pdf", small_content, content_type="application/pdf"
+        )
+        try:
+            validate_surat_penerimaan_file(file_obj)
+        except ValidationError as exc:
+            self.fail(f"ValidationError tidak diharapkan: {exc}")
+            

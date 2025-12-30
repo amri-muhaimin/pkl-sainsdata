@@ -108,7 +108,6 @@ class SeminarPenjadwalanForm(forms.ModelForm):
             "jadwal": forms.DateTimeInput(
                 attrs={"class": "form-control", "type": "datetime-local"}
             ),
-            # ruang pakai field di atas
         }
 
     def __init__(self, *args, **kwargs):
@@ -124,7 +123,6 @@ class SeminarPenjadwalanForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        raw_dosen = str(self.data.get("dosen_penguji") or "")
 
         dosen_penguji = cleaned.get("dosen_penguji")
         jadwal = cleaned.get("jadwal")
@@ -137,17 +135,15 @@ class SeminarPenjadwalanForm(forms.ModelForm):
             errors.append("Dosen penguji wajib dipilih.")
 
         # Tidak boleh dosen pembimbing
-        if seminar and seminar.dosen_pembimbing_id:
-            pembimbing_id = seminar.dosen_pembimbing_id
-
-            if str(pembimbing_id) in (raw_d1, raw_d2):
-                errors.append("Dosen pembimibng tidak boleh menjadi dosen penguji.")
+        if seminar and seminar.dosen_pembimbing_id and dosen_penguji:
+            if dosen_penguji.pk == seminar.dosen_pembimbing_id:
+                errors.append("Dosen pembimbing tidak boleh menjadi dosen penguji.")
 
         if not jadwal:
             errors.append("Jadwal seminar wajib diisi.")
 
         if not ruang:
-            errors.append("Ruang seminar wajib dipilih")
+            errors.append("Ruang seminar wajib dipilih.")
 
         if errors:
             raise ValidationError(errors)
